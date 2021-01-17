@@ -1,0 +1,24 @@
+/*
+ * keypad_cmd.h
+ *
+ *  Created on: 08.01.2021
+ *      Author: matti
+ */
+
+#ifndef INC_CMD_KEYPAD_CMD_H_
+#define INC_CMD_KEYPAD_CMD_H_
+
+/*
+ * Global definition of shell commands
+ * for module keypad
+ */
+extern void keypad_loop_key(BaseSequentialStream *chp, int argc, char *argv[]);
+
+/*
+ * Shell command list
+ * for module kepad
+ */
+#define KEYPAD_CMD_LIST \
+    {"kp-loop-keys", keypad_loop_key}, \
+
+#endif /* INC_CMD_KEYPAD_CMD_H_ */
