@@ -22,7 +22,7 @@
  * Include dependencies
  */
 #include "api/hal/usb.h"
-#include "cmd/app/keybon_cmd.h"
+#include "cmd/app/anykey_cmd.h"
 #include "cmd/hal/glcd_cmd.h"
 #include "cmd/hal/keypad_cmd.h"
 #include "cmd/hal/usb_cmd.h"
@@ -38,7 +38,7 @@ static void     _cmd_shell_init_module  (void);
  * Static variables
  */
 static const ShellCommand _cmd_shell_cmds[] = {
-  KEYBON_CMD_LIST
+  ANYKEY_CMD_LIST
   GLCD_CMD_LIST
   KEYPAD_CMD_LIST
   USB_CMD_LIST

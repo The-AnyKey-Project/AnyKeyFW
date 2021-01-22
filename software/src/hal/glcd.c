@@ -22,7 +22,7 @@
  */
 #include <stdlib.h>
 #include <string.h>
-#include "api/app/keybon.h"
+#include "api/app/anykey.h"
 
 /*
  * Forward declarations of static functions

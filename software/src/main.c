@@ -18,7 +18,7 @@
 /*
  * Project specific API includes
  */
-#include "api/app/keybon.h"
+#include "api/app/anykey.h"
 
 
 /*
@@ -41,7 +41,7 @@ int main(void) {
    * does not return since it also starts shell
    * thread handling
    */
-  keybon_init();
+  anykey_init();
 
   /*
    * HIC SVNT DRACONES

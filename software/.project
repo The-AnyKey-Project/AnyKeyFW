@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>keybon_v2</name>
+	<name>AnyKeyFW</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -80,17 +80,17 @@
 		<link>
 			<name>board</name>
 			<type>2</type>
-			<locationURI>PROJECT_LOC/.3rdparty/ChibiOS_20.3.0/os/hal/boards/MAPLEMINI_STM32_F103</locationURI>
+			<locationURI>$%7BPROJECT_LOC%7D/.3rdparty/ChibiOS_20.3.0/os/hal/boards/MAPLEMINI_STM32_F103</locationURI>
 		</link>
 		<link>
 			<name>os</name>
 			<type>2</type>
-			<locationURI>PROJECT_LOC/.3rdparty/ChibiOS_20.3.0/os</locationURI>
+			<locationURI>$%7BPROJECT_LOC%7D/.3rdparty/ChibiOS_20.3.0/os</locationURI>
 		</link>
 		<link>
 			<name>u8g2</name>
 			<type>2</type>
-			<locationURI>PROJECT_LOC/.3rdparty/u8g2</locationURI>
+			<locationURI>$%7BPROJECT_LOC%7D/.3rdparty/u8g2</locationURI>
 		</link>
 	</linkedResources>
 	<variableList>

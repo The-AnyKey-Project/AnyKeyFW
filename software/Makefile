@@ -98,7 +98,7 @@ endif
 #
 
 # Define project name here
-PROJECT = keybon
+PROJECT = AnyKeyFW
 
 # Target settings.
 MCU  = cortex-m3
@@ -181,7 +181,7 @@ U8G2_SRC = \
 CSRC = $(ALLCSRC) \
        ${U8G2_SRC} \
        src/main.c \
-       src/app/keybon.c \
+       src/app/anykey.c \
        src/app/cmd_shell.c \
        src/hal/glcd.c \
        src/hal/keypad.c \

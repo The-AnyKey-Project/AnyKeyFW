@@ -1,5 +1,5 @@
 /*
- * keybon.c
+ * anykey.c
  *
  *  Created on: 08.01.2021
  *      Author: matti
@@ -15,7 +15,7 @@
 /*
  * Includes module API, types & config
  */
-#include "api/app/keybon.h"
+#include "api/app/anykey.h"
 
 /*
  * Include dependencies
@@ -29,19 +29,19 @@
 /*
  * Static asserts
  */
-static_assert(KEYBON_NUMBER_OF_KEYS == (KEYPAD_SW_COUNT), "Number of keys does not match number used keypad switches");
-static_assert(KEYBON_NUMBER_OF_KEYS == (GLCD_DISP_MAX),   "Number of keys does not match number used displays");
+static_assert(ANYKEY_NUMBER_OF_KEYS == (KEYPAD_SW_COUNT), "Number of keys does not match number used keypad switches");
+static_assert(ANYKEY_NUMBER_OF_KEYS == (GLCD_DISP_MAX),   "Number of keys does not match number used displays");
 
 /*
  * Forward declarations of static functions
  */
-static void             _keybon_init_module(void);
+static void             _anykey_init_module(void);
 
 /*
  * Static variables
  */
-static THD_WORKING_AREA(_keybon_key_stack, KEYBON_KEY_THREAD_STACK);
-static THD_WORKING_AREA(_keybon_cmd_stack, KEYBON_CMD_THREAD_STACK);
+static THD_WORKING_AREA(_anykey_key_stack, ANYKEY_KEY_THREAD_STACK);
+static THD_WORKING_AREA(_anykey_cmd_stack, ANYKEY_CMD_THREAD_STACK);
 
 /*
  * Global variables
@@ -51,29 +51,29 @@ static THD_WORKING_AREA(_keybon_cmd_stack, KEYBON_CMD_THREAD_STACK);
  * Tasks
  */
 
-static __attribute__((noreturn)) THD_FUNCTION(_keybon_key_thread, arg)
+static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 {
   (void)arg;
 
 
-  chRegSetThreadName("keybon_key_thread");
+  chRegSetThreadName("anykey_key_thread");
 
 //  while(true)
 //  {
-//
+//TODO
 //  }
 }
 
-static __attribute__((noreturn)) THD_FUNCTION(_keybon_cmd_thread, arg)
+static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 {
   (void)arg;
 
 
-  chRegSetThreadName("keybon_cmd_thread");
+  chRegSetThreadName("anykey_cmd_thread");
 
 //  while(true)
 //  {
-//
+//TODO
 //  }
 
 }
@@ -83,12 +83,12 @@ static __attribute__((noreturn)) THD_FUNCTION(_keybon_cmd_thread, arg)
  * Static helper functions
  */
 
-static void _keybon_init_module(void)
+static void _anykey_init_module(void)
 {
-  chThdCreateStatic(_keybon_key_stack, sizeof(_keybon_key_stack),
-                    KEYBON_KEY_THREAD_PRIO, _keybon_key_thread, NULL);
-  chThdCreateStatic(_keybon_cmd_stack, sizeof(_keybon_cmd_stack),
-                    KEYBON_CMD_THREAD_PRIO, _keybon_cmd_thread, NULL);
+  chThdCreateStatic(_anykey_key_stack, sizeof(_anykey_key_stack),
+                    ANYKEY_KEY_THREAD_PRIO, _anykey_key_thread, NULL);
+  chThdCreateStatic(_anykey_cmd_stack, sizeof(_anykey_cmd_stack),
+                    ANYKEY_CMD_THREAD_PRIO, _anykey_cmd_thread, NULL);
 }
 
 
@@ -100,28 +100,28 @@ static void _keybon_init_module(void)
  * Shell functions
  */
 
-void keybon_loop_keys(BaseSequentialStream *chp, int argc, char *argv[])
+void anykey_loop_keys(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)chp;
   (void)argc;
   (void)argv;
 }
 
-void keybon_show_layer(BaseSequentialStream *chp, int argc, char *argv[])
+void anykey_show_layer(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)chp;
   (void)argc;
   (void)argv;
 }
 
-void keybon_list_layers(BaseSequentialStream *chp, int argc, char *argv[])
+void anykey_list_layers(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)chp;
   (void)argc;
   (void)argv;
 }
 
-void keybon_set_layer(BaseSequentialStream *chp, int argc, char *argv[])
+void anykey_set_layer(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)chp;
   (void)argc;
@@ -132,7 +132,7 @@ void keybon_set_layer(BaseSequentialStream *chp, int argc, char *argv[])
  * API functions
  */
 
-void keybon_init(void)
+void anykey_init(void)
 {
   /*
    * Project specific hal initialization
@@ -151,7 +151,7 @@ void keybon_init(void)
   /*
    * Initialize toplevel application
    */
-  _keybon_init_module();
+  _anykey_init_module();
 
   /*
    * Start shell handling,

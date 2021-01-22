@@ -20,7 +20,7 @@
 /*
  * Include dependencies
  */
-#include "api/app/keybon.h"
+#include "api/app/anykey.h"
 
 /*
  * Forward declarations of static functions
