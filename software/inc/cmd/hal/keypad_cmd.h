@@ -12,13 +12,13 @@
  * Global definition of shell commands
  * for module keypad
  */
-extern void keypad_loop_key(BaseSequentialStream *chp, int argc, char *argv[]);
+extern void keypad_loop_switches(BaseSequentialStream *chp, int argc, char *argv[]);
 
 /*
  * Shell command list
  * for module kepad
  */
 #define KEYPAD_CMD_LIST \
-    {"kp-loop-keys", keypad_loop_key}, \
+    {"kp-loop-sw", keypad_loop_switches}, \
 
 #endif /* INC_CMD_KEYPAD_CMD_H_ */

@@ -24,6 +24,13 @@
 #include "api/hal/glcd.h"
 #include "api/hal/keypad.h"
 #include "api/hal/usb.h"
+#include <assert.h>
+
+/*
+ * Static asserts
+ */
+static_assert(KEYBON_NUMBER_OF_KEYS == (KEYPAD_SW_COUNT), "Number of keys does not match number used keypad switches");
+static_assert(KEYBON_NUMBER_OF_KEYS == (GLCD_DISP_MAX),   "Number of keys does not match number used displays");
 
 /*
  * Forward declarations of static functions
@@ -134,10 +141,12 @@ void keybon_init(void)
   keypad_init();
   usb_init();
 
+#if defined(USE_CMD_SHELL)
   /*
    * Initialize additional application components
    */
   cmd_shell_init();
+#endif
 
   /*
    * Initialize toplevel application
@@ -148,7 +157,7 @@ void keybon_init(void)
    * Start shell handling,
    * should never return
    */
-#if 1
+#if defined(USE_CMD_SHELL)
   cmd_shell_loop();
 #else
   while(true) ;

@@ -21,6 +21,7 @@ typedef enum {
   KEYPAD_SW_ID_SW09,
   KEYPAD_SW_ID_MAX,
 }keypad_sw_id_t;
+#define KEYPAD_SW_COUNT (KEYPAD_SW_ID_MAX - KEYPAD_SW_ID_MIN)
 
 typedef struct {
   uint32_t line;

@@ -27,6 +27,7 @@
 #include "cmd/hal/keypad_cmd.h"
 #include "cmd/hal/usb_cmd.h"
 
+#if defined(USE_CMD_SHELL)
 /*
  * Forward declarations of static functions
  */
@@ -97,4 +98,4 @@ void cmd_shell_loop(void)
     chThdSleepMilliseconds(1000);
   }
 }
-
+#endif
