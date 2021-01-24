@@ -293,8 +293,10 @@ static void _usb_init_module(void)
    * Note, a delay is inserted in order to not have to disconnect the cable
    * after a reset.
    */
+#if defined(USE_USB_DISC)
   usbDisconnectBus(serusbcfg.usbp);
   chThdSleepMilliseconds(1500);
+#endif
   usbStart(serusbcfg.usbp, &usbcfg);
   usbConnectBus(serusbcfg.usbp);
 }

@@ -8,7 +8,7 @@ export $(shell sed 's/=.*//' env_vars)
 
 # Compiler options here.
 ifeq ($(USE_OPT),)
-  USE_OPT = -Os -ggdb -fomit-frame-pointer -falign-functions=16 
+  USE_OPT = -O0 -ggdb -fomit-frame-pointer -falign-functions=16 
 endif
 
 # C specific options here (added to USE_OPT).
@@ -54,11 +54,20 @@ else
   USE_STLINK = 
 endif
 
+# Enable Debug shell
 ifeq ($(USE_CMD_SHELL),1)
   USE_CMD_SHELL = -DUSE_CMD_SHELL
 else
   USE_CMD_SHELL = 
 endif
+
+# Enable USB disconnect circuit
+ifeq ($(USE_USB_DISC),1)
+  USE_USB_DISC = -DUSE_USB_DISC
+else
+  USE_USB_DISC = 
+endif
+
 #
 # Build global options
 ##############################################################################
@@ -215,7 +224,7 @@ CPPWARN = -Wall -Wextra -Wundef
 #
 
 # List all user C define here, like -D_DEBUG=1
-UDEFS = -DSHELL_CMD_TEST_ENABLED=0 ${USE_STLINK} ${USE_CMD_SHELL}
+UDEFS = -DSHELL_CMD_TEST_ENABLED=0 ${USE_STLINK} ${USE_CMD_SHELL} ${USE_USB_DISC}
 
 # Define ASM defines here
 UADEFS =

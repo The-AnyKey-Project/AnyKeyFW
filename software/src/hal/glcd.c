@@ -195,6 +195,10 @@ static uint8_t _glcd_u8g2_hw_spi(glcd_display_id_t disp, U8X8_UNUSED u8x8_t *u8x
       spiSend(GLCD_SPI_DRIVER, _glcd_msg_buffer_idx, _glcd_msg_buffer);
       _glcd_unselect_display(disp);
       break;
+    case U8X8_MSG_BYTE_SET_DC:
+      if (arg_int) palSetLine(GLCD_DC_LINE);
+      else palClearLine(GLCD_DC_LINE);
+      break;
     default:
       return 0;
   }
@@ -213,9 +217,12 @@ static uint8_t _glcd_u8g2_gpio_and_delay(U8X8_UNUSED u8x8_t *u8x8, U8X8_UNUSED u
                 asm volatile("nop");
       }
       break;
-    case U8X8_MSG_BYTE_SET_DC:
-      if (arg_int) palSetLine(GLCD_DC_LINE);
-      else palClearLine(GLCD_DC_LINE);
+    case U8X8_MSG_DELAY_MILLI:
+      {
+        uint32_t i = 0;
+        for(i=0; i < arg_int*1000; i++)
+                asm volatile("nop");
+      }
       break;
     case U8X8_MSG_GPIO_RESET:
       if (arg_int) palSetLine(GLCD_RESET_LINE);

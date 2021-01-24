@@ -137,7 +137,7 @@ void anykey_init(void)
   /*
    * Project specific hal initialization
    */
-//  glcd_init();
+  glcd_init();
   keypad_init();
   usb_init();
 
