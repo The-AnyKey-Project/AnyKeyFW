@@ -24,17 +24,19 @@
 #define GLCD_CS_LINE_9           PAL_LINE(GPIOB, 15U)
 
 #define GLCD_SPI_DRIVER          (&SPID1)
-#define GLCD_SPI_CR1_MODE        (SPI_CR1_CPHA | SPI_CR1_CPOL) // Mode 3
-#define GLCD_SPI_CR1_BR          (SPI_CR1_BR_1 )               //~MHz
+#define GLCD_SPI_CR1_MODE        (0)                // Mode 3
+#define GLCD_SPI_CR1_BR          (SPI_CR1_BR_1)     // ~8MHz
 #define GLCD_SPI_BUFFER_SIZE     512
 
-#define GLCD_UPDATE_THREAD_PRIO  128
+#define GLCD_UPDATE_THREAD_PRIO  (NORMALPRIO)
 #define GLCD_UPDATE_THREAD_STACK 512
 #define GLCD_UPDATE_THREAD_P_MS  200
 
 #define GLCD_DISPLAY_BLOCK_SIZE 8
 #define GLCD_DISPLAY_WIDTH      64
 #define GLCD_DISPLAY_HEIGTH     48
+
+#define GLCD_DEFAULT_BRIGHTNESS 128
 
 
 /*

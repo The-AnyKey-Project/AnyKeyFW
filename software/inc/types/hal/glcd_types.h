@@ -23,16 +23,6 @@ typedef enum {
   GLCD_DISP_MAX
 }glcd_display_id_t;
 
-typedef uint8_t (*glcd_spi_cb_t) (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
-typedef uint8_t (*glcd_gpio_cb_t)(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
-
-typedef struct {
-  u8g2_t                handle;
-  uint32_t              cs_line;
-  glcd_spi_cb_t         spi_cb;
-  glcd_gpio_cb_t        gpio_cb;
-}glcd_display_t;
-
 typedef struct {
   uint8_t content[GLCD_DISPLAY_BUFFER];
 }glcd_display_buffer_t;

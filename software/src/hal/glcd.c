@@ -30,20 +30,15 @@
 static void             _glcd_init_hal            (void);
 static void             _glcd_init_module         (void);
 static void             _glcd_init_display        (void);
-static void             _glcd_draw_bitmap         (u8g2_t *u8g2, glcd_display_buffer_t * object);
+static void             _glcd_draw_bitmap         (glcd_display_id_t display, glcd_display_buffer_t * object);
 static void             _glcd_select_display      (glcd_display_id_t display);
 static void             _glcd_unselect_display    (glcd_display_id_t display);
-static uint8_t          _glcd_u8g2_hw_spi         (glcd_display_id_t disp, U8X8_UNUSED u8x8_t *u8x8, U8X8_UNUSED uint8_t msg, U8X8_UNUSED uint8_t arg_int, U8X8_UNUSED void *arg_ptr);
-static uint8_t          _glcd_u8g2_gpio_and_delay (U8X8_UNUSED u8x8_t *u8x8, U8X8_UNUSED uint8_t msg, U8X8_UNUSED uint8_t arg_int, U8X8_UNUSED void *arg_ptr);
-static uint8_t          _glcd_spi_cb_1            (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr) { return _glcd_u8g2_hw_spi(GLCD_DISP_1, u8x8, msg, arg_int, arg_ptr); }
-static uint8_t          _glcd_spi_cb_2            (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr) { return _glcd_u8g2_hw_spi(GLCD_DISP_2, u8x8, msg, arg_int, arg_ptr); }
-static uint8_t          _glcd_spi_cb_3            (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr) { return _glcd_u8g2_hw_spi(GLCD_DISP_3, u8x8, msg, arg_int, arg_ptr); }
-static uint8_t          _glcd_spi_cb_4            (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr) { return _glcd_u8g2_hw_spi(GLCD_DISP_4, u8x8, msg, arg_int, arg_ptr); }
-static uint8_t          _glcd_spi_cb_5            (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr) { return _glcd_u8g2_hw_spi(GLCD_DISP_5, u8x8, msg, arg_int, arg_ptr); }
-static uint8_t          _glcd_spi_cb_6            (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr) { return _glcd_u8g2_hw_spi(GLCD_DISP_6, u8x8, msg, arg_int, arg_ptr); }
-static uint8_t          _glcd_spi_cb_7            (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr) { return _glcd_u8g2_hw_spi(GLCD_DISP_7, u8x8, msg, arg_int, arg_ptr); }
-static uint8_t          _glcd_spi_cb_8            (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr) { return _glcd_u8g2_hw_spi(GLCD_DISP_8, u8x8, msg, arg_int, arg_ptr); }
-static uint8_t          _glcd_spi_cb_9            (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr) { return _glcd_u8g2_hw_spi(GLCD_DISP_9, u8x8, msg, arg_int, arg_ptr); }
+static inline void      _glcd_select_all          (void);
+static inline void      _glcd_unselect_all        (void);
+static void             _glcd_set_contrast        (uint8_t value);
+static void             _glcd_clear_display       (void);
+static uint8_t          _glcd_u8g2_hw_spi         (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
+static uint8_t          _glcd_u8g2_gpio_and_delay (u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
 
 /*
  * Static variables
@@ -56,21 +51,14 @@ static const SPIConfig _glcd_spid_cfg = {
 };
 
 static THD_WORKING_AREA(_glcd_update_stack, GLCD_UPDATE_THREAD_STACK);
-static uint8_t                  _glcd_msg_buffer[GLCD_SPI_BUFFER_SIZE];
-static uint16_t                 _glcd_msg_buffer_idx = 0;
+static u8g2_t                   _glcd_display;
 static glcd_display_buffer_t *  _glcd_display_buffers = NULL;
 static uint8_t                  _glcd_display_buffers_dirty = 0;
-static glcd_display_t           _glcd_displays[GLCD_DISP_MAX] =
+static uint32_t                 _glcd_display_cs_lines[GLCD_DISP_MAX] =
 {
-    {.cs_line = GLCD_CS_LINE_1, .spi_cb = &_glcd_spi_cb_1, .gpio_cb = &_glcd_u8g2_gpio_and_delay },
-    {.cs_line = GLCD_CS_LINE_2, .spi_cb = &_glcd_spi_cb_2, .gpio_cb = &_glcd_u8g2_gpio_and_delay },
-    {.cs_line = GLCD_CS_LINE_3, .spi_cb = &_glcd_spi_cb_3, .gpio_cb = &_glcd_u8g2_gpio_and_delay },
-    {.cs_line = GLCD_CS_LINE_4, .spi_cb = &_glcd_spi_cb_4, .gpio_cb = &_glcd_u8g2_gpio_and_delay },
-    {.cs_line = GLCD_CS_LINE_5, .spi_cb = &_glcd_spi_cb_5, .gpio_cb = &_glcd_u8g2_gpio_and_delay },
-    {.cs_line = GLCD_CS_LINE_6, .spi_cb = &_glcd_spi_cb_6, .gpio_cb = &_glcd_u8g2_gpio_and_delay },
-    {.cs_line = GLCD_CS_LINE_7, .spi_cb = &_glcd_spi_cb_7, .gpio_cb = &_glcd_u8g2_gpio_and_delay },
-    {.cs_line = GLCD_CS_LINE_8, .spi_cb = &_glcd_spi_cb_8, .gpio_cb = &_glcd_u8g2_gpio_and_delay },
-    {.cs_line = GLCD_CS_LINE_9, .spi_cb = &_glcd_spi_cb_9, .gpio_cb = &_glcd_u8g2_gpio_and_delay },
+    GLCD_CS_LINE_1, GLCD_CS_LINE_2, GLCD_CS_LINE_3,
+    GLCD_CS_LINE_4, GLCD_CS_LINE_5, GLCD_CS_LINE_6,
+    GLCD_CS_LINE_7, GLCD_CS_LINE_8, GLCD_CS_LINE_9
 };
 
 
@@ -87,7 +75,6 @@ static __attribute__((noreturn)) THD_FUNCTION(_glcd_update_thread, arg)
   (void)arg;
 
   chRegSetThreadName("glcd_update");
-  chThdSleepMilliseconds(GLCD_UPDATE_THREAD_P_MS);
 
   while (true)
   {
@@ -98,7 +85,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_glcd_update_thread, arg)
       uint8_t display = 0;
       for (display = 0; display < GLCD_DISP_MAX; display++)
       {
-        _glcd_draw_bitmap(&_glcd_displays[display].handle, &_glcd_display_buffers[display]);
+        _glcd_draw_bitmap(display, &_glcd_display_buffers[display]);
       }
       chSysLock();
       _glcd_display_buffers_dirty = 0;
@@ -127,7 +114,8 @@ static void _glcd_init_hal(void)
   uint8_t display = 0;
   for (display = 0; display < GLCD_DISP_MAX; display++)
   {
-    palSetLineMode(_glcd_displays[display].cs_line, PAL_MODE_OUTPUT_PUSHPULL);
+    palSetLineMode(_glcd_display_cs_lines[display], PAL_MODE_OUTPUT_PUSHPULL);
+    palSetLine(_glcd_display_cs_lines[display]);
   }
 }
 
@@ -139,65 +127,97 @@ static void _glcd_init_module(void)
 
 static void _glcd_select_display(glcd_display_id_t display)
 {
-  palClearLine(_glcd_displays[display].cs_line);
+  palClearLine(_glcd_display_cs_lines[display]);
 }
 
 static void _glcd_unselect_display(glcd_display_id_t display)
 {
-  palSetLine(_glcd_displays[display].cs_line);
+  palSetLine(_glcd_display_cs_lines[display]);
+}
+
+static inline void _glcd_select_all(void)
+{
+  uint8_t display = 0;
+  for (display = 0; display < GLCD_DISP_MAX; display++)
+  {
+      _glcd_select_display(display);
+  }
+}
+
+static inline void _glcd_unselect_all(void){
+  uint8_t display = 0;
+  for (display = 0; display < GLCD_DISP_MAX; display++)
+  {
+      _glcd_unselect_display(display);
+  }
+}
+
+static void _glcd_set_contrast(uint8_t value)
+{
+  u8g2_SetContrast(&_glcd_display,value);
+}
+
+static void _glcd_clear_display(void)
+{
+  u8g2_ClearDisplay(&_glcd_display);
+}
+
+static void _glcd_setup_display(void)
+{
+  u8g2_Setup_ssd1306_64x48_er_f(&_glcd_display,
+                                U8G2_R0,
+                                _glcd_u8g2_hw_spi,
+                                _glcd_u8g2_gpio_and_delay);
+
+  u8g2_InitDisplay(&_glcd_display);
+  _glcd_clear_display();
+  u8g2_SetPowerSave(&_glcd_display, 0);
 }
 
 static void _glcd_init_display(void)
 {
-  uint8_t display = 0;
 
   spiStart(GLCD_SPI_DRIVER, &_glcd_spid_cfg);
 
-  for (display = 0; display < GLCD_DISP_MAX; display++)
-  {
-      _glcd_unselect_display((glcd_display_id_t)display);
-    u8g2_Setup_ssd1306_64x48_er_f(&_glcd_displays[display].handle,
-                                  U8G2_R0,
-                                  _glcd_displays[display].spi_cb,
-                                  _glcd_displays[display].gpio_cb);
-    u8g2_InitDisplay(&_glcd_displays[display].handle);
-    u8g2_SetPowerSave(&_glcd_displays[display].handle, 0);
-    u8g2_SetContrast(&_glcd_displays[display].handle,0);
-  }
+  _glcd_select_all();
+
+  /*
+   * Since all displays are selected, all displays
+   * are initialized at once
+   */
+  _glcd_setup_display();
+  _glcd_set_contrast(GLCD_DEFAULT_BRIGHTNESS);
+  _glcd_unselect_all();
 }
 
-static void _glcd_draw_bitmap(u8g2_t *u8g2, glcd_display_buffer_t * object)
+static void _glcd_draw_bitmap(glcd_display_id_t display, glcd_display_buffer_t * object)
 {
-  u8g2_DrawBitmap(u8g2, 0, 0,
+  _glcd_select_display(display);
+  u8g2_DrawBitmap(&_glcd_display, 0, 0,
                   GLCD_DISPLAY_WIDTH/GLCD_DISPLAY_BLOCK_SIZE,
-                  GLCD_DISPLAY_HEIGTH/GLCD_DISPLAY_BLOCK_SIZE,
+                  GLCD_DISPLAY_HEIGTH,
                   object->content);
-  u8g2_SendBuffer(u8g2);
+  u8g2_SendBuffer(&_glcd_display);
+  _glcd_unselect_display(display);
 }
 
 /*
  * Callback functions
  */
-static uint8_t _glcd_u8g2_hw_spi(glcd_display_id_t disp, U8X8_UNUSED u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr)
+static uint8_t _glcd_u8g2_hw_spi(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr)
 {
-
+  (void)u8x8;
   switch(msg)
   {
     case U8X8_MSG_BYTE_SEND:
-      memcpy(&_glcd_msg_buffer[_glcd_msg_buffer_idx], arg_ptr, arg_int);
-      _glcd_msg_buffer_idx += arg_int;
+      spiSend(GLCD_SPI_DRIVER, arg_int, arg_ptr);
       break;
     case U8X8_MSG_BYTE_START_TRANSFER:
-      _glcd_msg_buffer_idx = 0;
-      _glcd_select_display(disp);
       break;
     case U8X8_MSG_BYTE_END_TRANSFER:
-      spiSend(GLCD_SPI_DRIVER, _glcd_msg_buffer_idx, _glcd_msg_buffer);
-      _glcd_unselect_display(disp);
       break;
     case U8X8_MSG_BYTE_SET_DC:
-      if (arg_int) palSetLine(GLCD_DC_LINE);
-      else palClearLine(GLCD_DC_LINE);
+      palWriteLine(GLCD_DC_LINE, arg_int);
       break;
     default:
       return 0;
@@ -205,28 +225,21 @@ static uint8_t _glcd_u8g2_hw_spi(glcd_display_id_t disp, U8X8_UNUSED u8x8_t *u8x
   return 1;
 }
 
-static uint8_t _glcd_u8g2_gpio_and_delay(U8X8_UNUSED u8x8_t *u8x8, U8X8_UNUSED uint8_t msg, U8X8_UNUSED uint8_t arg_int, U8X8_UNUSED void *arg_ptr)
+static uint8_t _glcd_u8g2_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr)
 {
+  (void)u8x8;
+  (void)arg_ptr;
   switch(msg)
   {
   //Function to define the logic level of the RESET line
-    case U8X8_MSG_DELAY_NANO:
-      {
-        uint16_t i = 0;
-        for(i=0; i < arg_int; i++)
-                asm volatile("nop");
-      }
-      break;
     case U8X8_MSG_DELAY_MILLI:
-      {
-        uint32_t i = 0;
-        for(i=0; i < arg_int*1000; i++)
-                asm volatile("nop");
-      }
+      chThdSleepMilliseconds(arg_int);
       break;
     case U8X8_MSG_GPIO_RESET:
-      if (arg_int) palSetLine(GLCD_RESET_LINE);
-      else palClearLine(GLCD_RESET_LINE);
+      palWriteLine(GLCD_RESET_LINE, arg_int);
+      break;
+    case U8X8_MSG_GPIO_DC:
+      palWriteLine(GLCD_DC_LINE, arg_int);
       break;
     default:
       return 1;
@@ -238,6 +251,20 @@ static uint8_t _glcd_u8g2_gpio_and_delay(U8X8_UNUSED u8x8_t *u8x8, U8X8_UNUSED u
 /*
  * Shell functions
  */
+extern void glcd_set_contrast(BaseSequentialStream *chp, int argc, char *argv[])
+{
+  (void)argv;
+  if (argc != 1) {
+    chprintf(chp, "Usage: glcd-set-contrast value (0...255)\r\n");
+    return;
+  }
+  uint32_t value = atoi(argv[0]);
+  value = (value > 255 ) ? 255 : value ;
+
+  _glcd_select_all();
+  _glcd_set_contrast((uint8_t)(value));
+  _glcd_unselect_all();
+}
 
 /*
  * API functions
