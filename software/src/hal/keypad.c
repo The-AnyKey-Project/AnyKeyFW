@@ -131,9 +131,6 @@ static void _keypad_set_sw_states(uint32_t new_state)
 
 static void _keypad_init_hal(void)
 {
-#if !defined(USE_STLINK)
-  AFIO->MAPR |= (4 << 24); // disable TDO pin, ugly hack
-#endif
   uint8_t sw_id = 0;
   for(sw_id = 0; sw_id < KEYPAD_SW_COUNT; sw_id++)
   {

@@ -54,6 +54,7 @@ static THD_WORKING_AREA(_glcd_update_stack, GLCD_UPDATE_THREAD_STACK);
 static u8g2_t                   _glcd_display;
 static glcd_display_buffer_t *  _glcd_display_buffers = NULL;
 static uint8_t                  _glcd_display_buffers_dirty = 0;
+static mutex_t                  _glcd_display_mtx[GLCD_DISP_MAX];
 static uint32_t                 _glcd_display_cs_lines[GLCD_DISP_MAX] =
 {
     GLCD_CS_LINE_1, GLCD_CS_LINE_2, GLCD_CS_LINE_3,
@@ -121,18 +122,25 @@ static void _glcd_init_hal(void)
 
 static void _glcd_init_module(void)
 {
+  uint8_t display = 0;
+  for (display = 0; display < GLCD_DISP_MAX; display++)
+  {
+    chMtxObjectInit(&_glcd_display_mtx[display]);
+  }
   _glcd_init_display();
   chThdCreateStatic(_glcd_update_stack, sizeof(_glcd_update_stack), GLCD_UPDATE_THREAD_PRIO, _glcd_update_thread, NULL);
 }
 
 static void _glcd_select_display(glcd_display_id_t display)
 {
+  chMtxLock(&_glcd_display_mtx[display]);
   palClearLine(_glcd_display_cs_lines[display]);
 }
 
 static void _glcd_unselect_display(glcd_display_id_t display)
 {
   palSetLine(_glcd_display_cs_lines[display]);
+  chMtxUnlock(&_glcd_display_mtx[display]);
 }
 
 static inline void _glcd_select_all(void)
@@ -254,16 +262,26 @@ static uint8_t _glcd_u8g2_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_
 extern void glcd_set_contrast(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)argv;
-  if (argc != 1) {
-    chprintf(chp, "Usage: glcd-set-contrast value (0...255)\r\n");
+  if (argc != 2) {
+    chprintf(chp, "Usage: glcd-set-contrast (display) (contrast)\r\n");
+    chprintf(chp, "  Display range:  %d...%d\r\n",GLCD_DISP_1, (GLCD_DISP_MAX-1));
+    chprintf(chp, "  Contrast range: 0...255\r\n");
     return;
   }
-  uint32_t value = atoi(argv[0]);
+  uint8_t  display = atoi(argv[0]);
+  uint32_t value   = atoi(argv[1]);
   value = (value > 255 ) ? 255 : value ;
 
-  _glcd_select_all();
-  _glcd_set_contrast((uint8_t)(value));
-  _glcd_unselect_all();
+  if(display < GLCD_DISP_MAX)
+  {
+    _glcd_select_display(display);
+    _glcd_set_contrast((uint8_t)(value));
+    _glcd_unselect_display(display);
+  }
+  else
+  {
+    chprintf(chp, "Display id out of range (%d...%d)\r\n", GLCD_DISP_1, GLCD_DISP_MAX);
+  }
 }
 
 /*

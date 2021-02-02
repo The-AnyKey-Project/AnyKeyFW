@@ -63,6 +63,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 //TODO
 //  }
 }
+glcd_display_buffer_t test[9] ;
 
 static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 {
@@ -70,7 +71,18 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 
 
   chRegSetThreadName("anykey_cmd_thread");
-
+  uint16_t i = 0;
+  while (true)
+  {
+    systime_t time = chVTGetSystemTimeX();
+    if(i%5 == 0)
+    {
+      memset(test,(i % 10 >= 5) ? 0xff : 0xaa , sizeof(glcd_display_buffer_t)*9);
+      glcd_set_displays(test);
+    }
+    i++;
+    chThdSleepUntilWindowed(time, time + TIME_MS2I(200));
+  }
 //  while(true)
 //  {
 //TODO
@@ -82,6 +94,14 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 /*
  * Static helper functions
  */
+static void _anykey_init_hal(void)
+{
+#if defined(USE_STLINK)
+  AFIO->MAPR |= (2 << 24);      // Disable NJTRST, allow SWD
+#else
+  AFIO->MAPR |= (4 << 24);      // Disable SWD, use all pins as GPIO
+#endif
+}
 
 static void _anykey_init_module(void)
 {
@@ -151,6 +171,7 @@ void anykey_init(void)
   /*
    * Initialize toplevel application
    */
+  _anykey_init_hal();
   _anykey_init_module();
 
   /*
