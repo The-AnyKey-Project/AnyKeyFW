@@ -24,7 +24,7 @@
 #define GLCD_CS_LINE_9           PAL_LINE(GPIOB, 15U)
 
 #define GLCD_SPI_DRIVER          (&SPID1)
-#define GLCD_SPI_CR1_MODE        (0)                // Mode 3
+#define GLCD_SPI_CR1_MODE        (0)                // Mode 0
 #define GLCD_SPI_CR1_BR          (SPI_CR1_BR_1)     // ~8MHz
 #define GLCD_SPI_BUFFER_SIZE     512
 
@@ -37,7 +37,6 @@
 #define GLCD_DISPLAY_HEIGTH     48
 
 #define GLCD_DEFAULT_BRIGHTNESS 128
-
 
 /*
  * Derived configuration

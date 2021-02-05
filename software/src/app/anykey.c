@@ -55,7 +55,6 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 {
   (void)arg;
 
-
   chRegSetThreadName("anykey_key_thread");
 
 //  while(true)
@@ -69,20 +68,8 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 {
   (void)arg;
 
-
   chRegSetThreadName("anykey_cmd_thread");
-  uint16_t i = 0;
-  while (true)
-  {
-    systime_t time = chVTGetSystemTimeX();
-    if(i%5 == 0)
-    {
-      memset(test,(i % 10 >= 5) ? 0xff : 0xaa , sizeof(glcd_display_buffer_t)*9);
-      glcd_set_displays(test);
-    }
-    i++;
-    chThdSleepUntilWindowed(time, time + TIME_MS2I(200));
-  }
+
 //  while(true)
 //  {
 //TODO
@@ -154,6 +141,13 @@ void anykey_set_layer(BaseSequentialStream *chp, int argc, char *argv[])
 
 void anykey_init(void)
 {
+
+  /*
+   * Toplevel hal init
+   * (disable jtag functionality)
+   */
+  _anykey_init_hal();
+
   /*
    * Project specific hal initialization
    */
@@ -171,7 +165,6 @@ void anykey_init(void)
   /*
    * Initialize toplevel application
    */
-  _anykey_init_hal();
   _anykey_init_module();
 
   /*

@@ -259,7 +259,7 @@ static uint8_t _glcd_u8g2_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_
 /*
  * Shell functions
  */
-extern void glcd_set_contrast(BaseSequentialStream *chp, int argc, char *argv[])
+extern void glcd_set_contrast_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)argv;
   if (argc != 2) {
@@ -272,13 +272,7 @@ extern void glcd_set_contrast(BaseSequentialStream *chp, int argc, char *argv[])
   uint32_t value   = atoi(argv[1]);
   value = (value > 255 ) ? 255 : value ;
 
-  if(display < GLCD_DISP_MAX)
-  {
-    _glcd_select_display(display);
-    _glcd_set_contrast((uint8_t)(value));
-    _glcd_unselect_display(display);
-  }
-  else
+  if(glcd_set_contrast(display, value) == 0)
   {
     chprintf(chp, "Display id out of range (%d...%d)\r\n", GLCD_DISP_1, GLCD_DISP_MAX);
   }
@@ -299,4 +293,20 @@ void glcd_set_displays(glcd_display_buffer_t * buffer)
   _glcd_display_buffers = buffer;
   _glcd_display_buffers_dirty = 1;
   chSysUnlockFromISR();
+}
+
+uint8_t glcd_set_contrast(glcd_display_id_t display, uint8_t value)
+{
+  uint8_t ret = 1;
+  if(display < GLCD_DISP_MAX)
+  {
+    _glcd_select_display(display);
+    _glcd_set_contrast((uint8_t)(value));
+    _glcd_unselect_display(display);
+  }
+  else
+  {
+    ret = 0;
+  }
+  return ret;
 }
