@@ -75,7 +75,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_glcd_update_thread, arg)
 
   (void)arg;
 
-  chRegSetThreadName("glcd_update");
+  chRegSetThreadName("glcd_update_th");
 
   while (true)
   {

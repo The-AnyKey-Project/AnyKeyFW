@@ -55,7 +55,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 {
   (void)arg;
 
-  chRegSetThreadName("anykey_key_thread");
+  chRegSetThreadName("anykey_key_th");
 
 //  while(true)
 //  {
@@ -68,7 +68,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 {
   (void)arg;
 
-  chRegSetThreadName("anykey_cmd_thread");
+  chRegSetThreadName("anykey_cmd_th");
 
 //  while(true)
 //  {
@@ -167,14 +167,17 @@ void anykey_init(void)
    */
   _anykey_init_module();
 
+#if defined(USE_CMD_SHELL)
   /*
    * Start shell handling,
    * should never return
    */
-#if defined(USE_CMD_SHELL)
   cmd_shell_loop();
 #else
-  while(true) ;
+  /*
+   * Nothing to do, kill initial thread
+   */
+  chThdExit("good bye");
 #endif
   /*
    * If we reach this point,

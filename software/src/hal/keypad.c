@@ -58,7 +58,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_keypad_poll_thread, arg)
 {
   (void)arg;
 
-  chRegSetThreadName("keypad_poll_thread");
+  chRegSetThreadName("keypad_poll_th");
 
   while(true)
   {
