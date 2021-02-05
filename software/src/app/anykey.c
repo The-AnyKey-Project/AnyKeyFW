@@ -107,28 +107,28 @@ static void _anykey_init_module(void)
  * Shell functions
  */
 
-void anykey_loop_keys(BaseSequentialStream *chp, int argc, char *argv[])
+void anykey_loop_keys_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)chp;
   (void)argc;
   (void)argv;
 }
 
-void anykey_show_layer(BaseSequentialStream *chp, int argc, char *argv[])
+void anykey_show_layer_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)chp;
   (void)argc;
   (void)argv;
 }
 
-void anykey_list_layers(BaseSequentialStream *chp, int argc, char *argv[])
+void anykey_list_layers_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)chp;
   (void)argc;
   (void)argv;
 }
 
-void anykey_set_layer(BaseSequentialStream *chp, int argc, char *argv[])
+void anykey_set_layer_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)chp;
   (void)argc;

@@ -158,7 +158,7 @@ static void _keypad_init_module(void)
 /*
  * Shell functions
  */
-void keypad_loop_switches(BaseSequentialStream *chp, int argc, char *argv[])
+void keypad_loop_switches_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)argv;
   if (argc > 0) {
