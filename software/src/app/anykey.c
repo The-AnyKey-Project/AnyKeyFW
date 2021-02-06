@@ -35,8 +35,10 @@ static_assert(ANYKEY_NUMBER_OF_KEYS == (GLCD_DISP_MAX),   "Number of keys does n
 /*
  * Forward declarations of static functions
  */
+static void             _anykey_init_hal(void);
 static void             _anykey_init_module(void);
-
+static void             _anykey_press_key(uint8_t sw_id);
+static void             _anykey_release_key(uint8_t sw_id);
 /*
  * Static variables
  */
@@ -57,10 +59,34 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 
   chRegSetThreadName("anykey_key_th");
 
-//  while(true)
-//  {
-//TODO
-//  }
+  event_listener_t  event_listener;
+  chEvtRegister(&keypad_event_handle, &event_listener, KEYPAD_EVENT_NOTIFIER_BIT);
+
+  while(true)
+  {
+    eventmask_t events = chEvtWaitAny(EVENT_MASK(KEYPAD_EVENT_NOTIFIER_BIT));
+    if (events & EVENT_MASK(KEYPAD_EVENT_NOTIFIER_BIT))
+    {
+      keypad_event_t dest[ANYKEY_NUMBER_OF_KEYS];
+      keypad_get_sw_events(dest);
+      uint8_t sw_id = 0;
+      for(sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
+      {
+        switch(dest[sw_id])
+        {
+          case KEYPAD_EVENT_PRESS:
+            _anykey_press_key(sw_id);
+            break;
+          case KEYPAD_EVENT_RELEASE:
+            _anykey_release_key(sw_id);
+            break;
+          case KEYPAD_EVENT_NONE:
+          default:
+            break;
+        }
+      }
+    }
+  }
 }
 
 static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
@@ -80,6 +106,19 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 /*
  * Static helper functions
  */
+
+static void _anykey_press_key(uint8_t sw_id)
+{
+  //TODO
+  (void)sw_id;
+}
+
+static void _anykey_release_key(uint8_t sw_id)
+{
+  //TODO
+  (void)sw_id;
+}
+
 static void _anykey_init_hal(void)
 {
 #if defined(USE_STLINK)
