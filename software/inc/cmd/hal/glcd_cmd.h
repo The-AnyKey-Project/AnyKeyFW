@@ -19,6 +19,6 @@ extern void glcd_set_contrast_sh(BaseSequentialStream *chp, int argc, char *argv
  * for module glcd
  */
 #define GLCD_CMD_LIST \
-    {"glcd-set-contrast",   glcd_set_contrast_sh}, \
+    {"glcd-set-contrast",   glcd_set_contrast_sh}
 
 #endif /* INC_CMD_GLCD_CMD_H_ */
