@@ -12,6 +12,6 @@
 #include "types/hal/keypad_types.h"
 
 extern void keypad_init(void);
-extern uint32_t keypad_get_sw_states(void);
+extern void keypad_get_sw_events(keypad_event_t * dest);
 
 #endif /* INC_API_KEYPAD_H_ */

@@ -62,7 +62,6 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 //TODO
 //  }
 }
-glcd_display_buffer_t test[9] ;
 
 static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 {

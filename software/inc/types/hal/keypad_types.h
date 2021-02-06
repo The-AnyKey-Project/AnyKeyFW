@@ -23,6 +23,12 @@ typedef enum {
 }keypad_sw_id_t;
 #define KEYPAD_SW_COUNT (KEYPAD_SW_ID_MAX - KEYPAD_SW_ID_MIN)
 
+typedef enum {
+  KEYPAD_EVENT_NONE = 0,
+  KEYPAD_EVENT_PRESS,
+  KEYPAD_EVENT_RELEASE
+}keypad_event_t;
+
 typedef struct {
   uint32_t line;
   uint32_t delay;

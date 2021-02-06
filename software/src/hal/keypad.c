@@ -21,19 +21,20 @@
  * Include dependencies
  */
 #include "api/app/anykey.h"
+#include <string.h>
 
 /*
  * Forward declarations of static functions
  */
 static void             _keypad_init_hal        (void);
 static void             _keypad_init_module     (void);
-static void             _keypad_set_sw_states   (uint32_t new_state);
+static void             _keypad_set_sw_event    (uint8_t sw_id, keypad_event_t event);
 
 /*
  * Static variables
  */
 static THD_WORKING_AREA(_keypad_poll_stack, KEYPAD_POLL_THREAD_STACK);
-static uint32_t         _keypad_sw_states = 0;
+static keypad_event_t   _keypad_events[KEYPAD_SW_COUNT];
 static keypad_sw_t      _keypad_sw_list[KEYPAD_SW_COUNT] = {
   { .line = KEYPAD_BTN_LINE_SW01, .delay = 0, .state = KEYPAD_SW_STATE_INIT },
   { .line = KEYPAD_BTN_LINE_SW02, .delay = 0, .state = KEYPAD_SW_STATE_INIT },
@@ -64,8 +65,8 @@ static __attribute__((noreturn)) THD_FUNCTION(_keypad_poll_thread, arg)
   {
       systime_t time = chVTGetSystemTimeX();
       uint8_t sw_id = 0;
-      uint32_t new_state = 0;
       uint32_t pin_state = 0;
+      uint8_t  events_dirty = 0;
       for(sw_id = 0; sw_id < KEYPAD_SW_COUNT; sw_id++)
       {
           if(_keypad_sw_list[sw_id].delay == 0)
@@ -80,40 +81,52 @@ static __attribute__((noreturn)) THD_FUNCTION(_keypad_poll_thread, arg)
               {
                 pin_state = palReadLine(_keypad_sw_list[sw_id].line);
               }
-              if(pin_state == KEYPAD_BTN_PRESSED)
+
+              switch(_keypad_sw_list[sw_id].state)
               {
-                  switch(_keypad_sw_list[sw_id].state)
+                case KEYPAD_SW_STATE_INIT:
+                  if(pin_state == KEYPAD_BTN_PRESSED)
                   {
-                    case KEYPAD_SW_STATE_INIT:
-                      _keypad_sw_list[sw_id].delay = KEYPAD_BTN_PRESS_DELAY_TIME_TICKS;
-                      _keypad_sw_list[sw_id].state = KEYPAD_SW_STATE_PRESS;
-                      break;
-                    case KEYPAD_SW_STATE_PRESS:
-                      _keypad_sw_list[sw_id].delay = KEYPAD_BTN_REPRESS_DELAY_TIME_TICKS;
-                      break;
-                    default:
-                      _keypad_sw_list[sw_id].delay = 0;
-                      _keypad_sw_list[sw_id].state = KEYPAD_SW_STATE_INIT;
-                      break;
+                    _keypad_sw_list[sw_id].delay = KEYPAD_BTN_DEBOUNCE_TIME_TICKS;
+                    _keypad_sw_list[sw_id].state = KEYPAD_SW_STATE_PRESS;
+                    _keypad_set_sw_event(sw_id, KEYPAD_EVENT_PRESS);
+                    events_dirty = 1;
                   }
-                  new_state |= (1<<(sw_id + KEYPAD_SW_ID_MIN));
-              }
-              else
-              {
+                  else
+                  {
+                    _keypad_set_sw_event(sw_id, KEYPAD_EVENT_NONE);
+                  }
+                  break;
+                case KEYPAD_SW_STATE_PRESS:
+                  if(pin_state == KEYPAD_BTN_UNPRESSED)
+                  {
+                    _keypad_sw_list[sw_id].delay = KEYPAD_BTN_DEBOUNCE_TIME_TICKS;
+                    _keypad_sw_list[sw_id].state = KEYPAD_SW_STATE_INIT;
+                    _keypad_set_sw_event(sw_id, KEYPAD_EVENT_RELEASE);
+                    events_dirty = 1;
+                  }
+                  else
+                  {
+                    _keypad_set_sw_event(sw_id, KEYPAD_EVENT_NONE);
+                  }
+                  break;
+                default:
                   _keypad_sw_list[sw_id].delay = 0;
                   _keypad_sw_list[sw_id].state = KEYPAD_SW_STATE_INIT;
+                  _keypad_set_sw_event(sw_id, KEYPAD_EVENT_NONE);
+                  break;
               }
           }
           else
           {
-              _keypad_sw_list[sw_id].delay--;
+            _keypad_sw_list[sw_id].delay--;
+            _keypad_set_sw_event(sw_id, KEYPAD_EVENT_NONE);
           }
 
       }
-      if(new_state)
+      if(events_dirty)
       {
-          _keypad_set_sw_states(new_state);
-          chEvtBroadcastI(&keypad_event_handle);
+        chEvtBroadcastI(&keypad_event_handle);
       }
       chThdSleepUntilWindowed(time, time + TIME_MS2I(KEYPAD_POLL_MAIN_THREAD_P_MS));
   }
@@ -122,10 +135,10 @@ static __attribute__((noreturn)) THD_FUNCTION(_keypad_poll_thread, arg)
 /*
  * Static helper functions
  */
-static void _keypad_set_sw_states(uint32_t new_state)
+static void _keypad_set_sw_event(uint8_t sw_id, keypad_event_t event)
 {
   chSysLock();
-  _keypad_sw_states = new_state;
+  _keypad_events[sw_id] = event;
   chSysUnlock();
 }
 
@@ -145,6 +158,12 @@ static void _keypad_init_hal(void)
 
 static void _keypad_init_module(void)
 {
+  uint8_t sw_id = 0;
+  for(sw_id = 0; sw_id < KEYPAD_SW_COUNT; sw_id++)
+  {
+    _keypad_set_sw_event(sw_id, KEYPAD_EVENT_NONE);
+  }
+
   chEvtObjectInit(&keypad_event_handle);
 
   chThdCreateStatic(_keypad_poll_stack, sizeof(_keypad_poll_stack),
@@ -176,18 +195,17 @@ void keypad_loop_switches_sh(BaseSequentialStream *chp, int argc, char *argv[])
 
     if (events & EVENT_MASK(KEYPAD_EVENT_NOTIFIER_BIT))
     {
-      uint32_t states = keypad_get_sw_states();
+      keypad_event_t dest[KEYPAD_SW_COUNT];
+      keypad_get_sw_events(dest);
       uint8_t sw_id = 0;
       for(sw_id = 0; sw_id < KEYPAD_SW_COUNT; sw_id++)
       {
-        if (states & (1 << sw_id))
+        if (dest[sw_id] != KEYPAD_EVENT_NONE)
         {
-#if defined(USE_STLINK)
-          if (_keypad_sw_list[sw_id].line != PAL_LINE(GPIOA, 14U))
-#endif
-          {
-            chprintf(chp, "SW%d ", (sw_id - KEYPAD_SW_ID_MIN + 1));
-          }
+          char state[2];
+          state[0] = (dest[sw_id] == KEYPAD_EVENT_PRESS) ? 'P' : 'R';
+          state[1] = '\0';
+          chprintf(chp, "SW%d%s ", (sw_id - KEYPAD_SW_ID_MIN + 1), state);
         }
       }
     }
@@ -204,13 +222,11 @@ void keypad_init(void)
   _keypad_init_module();
 }
 
-uint32_t keypad_get_sw_states(void)
+void keypad_get_sw_events(keypad_event_t * dest)
 {
-  uint32_t ret = 0;
-
   chSysLock();
-  ret = _keypad_sw_states;
+  memcpy(dest, _keypad_events, sizeof(keypad_event_t)*KEYPAD_SW_COUNT);
   chSysUnlock();
 
-  return ret;
+  return ;
 }
