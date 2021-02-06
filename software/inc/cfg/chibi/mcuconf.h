@@ -13,6 +13,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
 */
+// clang-format off
 
 #ifndef MCUCONF_H
 #define MCUCONF_H
@@ -212,3 +213,4 @@
 #define STM32_WDG_USE_IWDG                  FALSE
 
 #endif /* MCUCONF_H */
+// clang-format on

@@ -8,9 +8,11 @@
 /*
  * Include ChibiOS & HAL
  */
+// clang-format off
 #include "ch.h"
 #include "hal.h"
 #include "chprintf.h"
+// clang-format on
 
 /*
  * Includes module API, types & config
@@ -29,16 +31,18 @@
 /*
  * Static asserts
  */
-static_assert(ANYKEY_NUMBER_OF_KEYS == (KEYPAD_SW_COUNT), "Number of keys does not match number used keypad switches");
-static_assert(ANYKEY_NUMBER_OF_KEYS == (GLCD_DISP_MAX),   "Number of keys does not match number used displays");
+static_assert(ANYKEY_NUMBER_OF_KEYS == (KEYPAD_SW_COUNT),
+              "Number of keys does not match number used keypad switches");
+static_assert(ANYKEY_NUMBER_OF_KEYS == (GLCD_DISP_MAX),
+              "Number of keys does not match number used displays");
 
 /*
  * Forward declarations of static functions
  */
-static void             _anykey_init_hal(void);
-static void             _anykey_init_module(void);
-static void             _anykey_press_key(uint8_t sw_id);
-static void             _anykey_release_key(uint8_t sw_id);
+static void _anykey_init_hal(void);
+static void _anykey_init_module(void);
+static void _anykey_press_key(uint8_t sw_id);
+static void _anykey_release_key(uint8_t sw_id);
 /*
  * Static variables
  */
@@ -59,10 +63,10 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 
   chRegSetThreadName("anykey_key_th");
 
-  event_listener_t  event_listener;
+  event_listener_t event_listener;
   chEvtRegister(&keypad_event_handle, &event_listener, KEYPAD_EVENT_NOTIFIER_BIT);
 
-  while(true)
+  while (true)
   {
     eventmask_t events = chEvtWaitAny(EVENT_MASK(KEYPAD_EVENT_NOTIFIER_BIT));
     if (events & EVENT_MASK(KEYPAD_EVENT_NOTIFIER_BIT))
@@ -70,9 +74,9 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
       keypad_event_t dest[ANYKEY_NUMBER_OF_KEYS];
       keypad_get_sw_events(dest);
       uint8_t sw_id = 0;
-      for(sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
+      for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
       {
-        switch(dest[sw_id])
+        switch (dest[sw_id])
         {
           case KEYPAD_EVENT_PRESS:
             _anykey_press_key(sw_id);
@@ -95,13 +99,11 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 
   chRegSetThreadName("anykey_cmd_th");
 
-//  while(true)
-//  {
-//TODO
-//  }
-
+  //  while(true)
+  //  {
+  // TODO
+  //  }
 }
-
 
 /*
  * Static helper functions
@@ -109,33 +111,32 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 
 static void _anykey_press_key(uint8_t sw_id)
 {
-  //TODO
+  // TODO
   (void)sw_id;
 }
 
 static void _anykey_release_key(uint8_t sw_id)
 {
-  //TODO
+  // TODO
   (void)sw_id;
 }
 
 static void _anykey_init_hal(void)
 {
 #if defined(USE_STLINK)
-  AFIO->MAPR |= (2 << 24);      // Disable NJTRST, allow SWD
+  AFIO->MAPR |= (2 << 24);  // Disable NJTRST, allow SWD
 #else
-  AFIO->MAPR |= (4 << 24);      // Disable SWD, use all pins as GPIO
+  AFIO->MAPR |= (4 << 24);  // Disable SWD, use all pins as GPIO
 #endif
 }
 
 static void _anykey_init_module(void)
 {
-  chThdCreateStatic(_anykey_key_stack, sizeof(_anykey_key_stack),
-                    ANYKEY_KEY_THREAD_PRIO, _anykey_key_thread, NULL);
-  chThdCreateStatic(_anykey_cmd_stack, sizeof(_anykey_cmd_stack),
-                    ANYKEY_CMD_THREAD_PRIO, _anykey_cmd_thread, NULL);
+  chThdCreateStatic(_anykey_key_stack, sizeof(_anykey_key_stack), ANYKEY_KEY_THREAD_PRIO,
+                    _anykey_key_thread, NULL);
+  chThdCreateStatic(_anykey_cmd_stack, sizeof(_anykey_cmd_stack), ANYKEY_CMD_THREAD_PRIO,
+                    _anykey_cmd_thread, NULL);
 }
-
 
 /*
  * Callback functions
@@ -179,7 +180,6 @@ void anykey_set_layer_sh(BaseSequentialStream *chp, int argc, char *argv[])
 
 void anykey_init(void)
 {
-
   /*
    * Toplevel hal init
    * (disable jtag functionality)

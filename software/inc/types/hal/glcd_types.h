@@ -10,7 +10,8 @@
 
 #include "u8g2.h"
 
-typedef enum {
+typedef enum
+{
   GLCD_DISP_1 = 0,
   GLCD_DISP_2,
   GLCD_DISP_3,
@@ -21,10 +22,11 @@ typedef enum {
   GLCD_DISP_8,
   GLCD_DISP_9,
   GLCD_DISP_MAX
-}glcd_display_id_t;
+} glcd_display_id_t;
 
-typedef struct {
+typedef struct
+{
   uint8_t content[GLCD_DISPLAY_BUFFER];
-}glcd_display_buffer_t;
+} glcd_display_buffer_t;
 
 #endif /* INC_TYPES_HAL_GLCD_TYPES_H_ */

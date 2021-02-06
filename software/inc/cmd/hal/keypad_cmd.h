@@ -18,7 +18,9 @@ extern void keypad_loop_switches_sh(BaseSequentialStream *chp, int argc, char *a
  * Shell command list
  * for module kepad
  */
+// clang-format off
 #define KEYPAD_CMD_LIST \
     {"kp-loop-sw", keypad_loop_switches_sh}
+// clang-format on
 
 #endif /* INC_CMD_KEYPAD_CMD_H_ */

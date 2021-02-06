@@ -8,7 +8,8 @@
 #ifndef INC_TYPES_HAL_KEYPAD_TYPES_H_
 #define INC_TYPES_HAL_KEYPAD_TYPES_H_
 
-typedef enum {
+typedef enum
+{
   KEYPAD_SW_ID_MIN = 0,
   KEYPAD_SW_ID_SW01 = KEYPAD_SW_ID_MIN,
   KEYPAD_SW_ID_SW02,
@@ -20,22 +21,25 @@ typedef enum {
   KEYPAD_SW_ID_SW08,
   KEYPAD_SW_ID_SW09,
   KEYPAD_SW_ID_MAX,
-}keypad_sw_id_t;
+} keypad_sw_id_t;
 #define KEYPAD_SW_COUNT (KEYPAD_SW_ID_MAX - KEYPAD_SW_ID_MIN)
 
-typedef enum {
+typedef enum
+{
   KEYPAD_EVENT_NONE = 0,
   KEYPAD_EVENT_PRESS,
   KEYPAD_EVENT_RELEASE
-}keypad_event_t;
+} keypad_event_t;
 
-typedef struct {
+typedef struct
+{
   uint32_t line;
   uint32_t delay;
-  enum {
+  enum
+  {
     KEYPAD_SW_STATE_INIT = 0,
     KEYPAD_SW_STATE_PRESS
-  }state;
-}keypad_sw_t;
+  } state;
+} keypad_sw_t;
 
 #endif /* INC_TYPES_HAL_KEYPAD_TYPES_H_ */

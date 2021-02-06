@@ -24,6 +24,7 @@
  * @addtogroup HAL_CONF
  * @{
  */
+// clang-format off
 
 #ifndef HALCONF_H
 #define HALCONF_H
@@ -529,3 +530,4 @@
 #endif /* HALCONF_H */
 
 /** @} */
+// clang-format on

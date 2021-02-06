@@ -18,7 +18,9 @@ extern void glcd_set_contrast_sh(BaseSequentialStream *chp, int argc, char *argv
  * Shell command list
  * for module glcd
  */
+// clang-format off
 #define GLCD_CMD_LIST \
     {"glcd-set-contrast",   glcd_set_contrast_sh}
+// clang-format on
 
 #endif /* INC_CMD_GLCD_CMD_H_ */

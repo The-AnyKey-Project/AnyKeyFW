@@ -14,6 +14,6 @@
 extern event_source_t keypad_event_handle;
 
 extern void keypad_init(void);
-extern void keypad_get_sw_events(keypad_event_t * dest);
+extern void keypad_get_sw_events(keypad_event_t* dest);
 
 #endif /* INC_API_KEYPAD_H_ */

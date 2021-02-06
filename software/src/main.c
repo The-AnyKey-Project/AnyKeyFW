@@ -12,6 +12,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+
 #include "ch.h"
 #include "hal.h"
 
@@ -20,12 +21,11 @@
  */
 #include "api/app/anykey.h"
 
-
 /*
  * Application entry point.
  */
-int main(void) {
-
+int main(void)
+{
   /*
    * System initializations.
    * - HAL initialization, this also initializes the configured device drivers

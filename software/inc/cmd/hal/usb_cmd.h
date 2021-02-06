@@ -17,6 +17,8 @@
  * Shell command list
  * for module usb
  */
+// clang-format off
 #define USB_CMD_LIST \
+// clang-format on
 
 #endif /* INC_CMD_USB_HID_H_ */

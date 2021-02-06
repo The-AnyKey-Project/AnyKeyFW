@@ -24,7 +24,7 @@
  * @details Kernel related settings and hooks.
  * @{
  */
-
+// clang-format off
 #ifndef CHCONF_H
 #define CHCONF_H
 
@@ -761,3 +761,4 @@
 #endif  /* CHCONF_H */
 
 /** @} */
+// clang-format on

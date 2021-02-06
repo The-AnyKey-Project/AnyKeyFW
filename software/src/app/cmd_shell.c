@@ -8,10 +8,12 @@
 /*
  * Include ChibiOS & HAL
  */
+// clang-format off
 #include "ch.h"
 #include "hal.h"
-#include "shell.h"
 #include "chprintf.h"
+#include "shell.h"
+// clang-format on
 
 /*
  * Includes module API, types & config
@@ -31,12 +33,13 @@
 /*
  * Forward declarations of static functions
  */
-static void     _cmd_shell_init_hal     (void);
-static void     _cmd_shell_init_module  (void);
+static void _cmd_shell_init_hal(void);
+static void _cmd_shell_init_module(void);
 
 /*
  * Static variables
  */
+// clang-format off
 static const ShellCommand _cmd_shell_cmds[] = {
   ANYKEY_CMD_LIST,
   GLCD_CMD_LIST,
@@ -49,6 +52,7 @@ static const ShellConfig _cmd_shell_cfg = {
   (BaseSequentialStream *)&USB_SERIAL_DRIVER_HANDLE,
   _cmd_shell_cmds
 };
+// clang-format on
 
 /*
  * Global variables
@@ -57,10 +61,7 @@ static const ShellConfig _cmd_shell_cfg = {
 /*
  * Static helper functions
  */
-static void _cmd_shell_init_hal(void)
-{
-
-}
+static void _cmd_shell_init_hal(void) {}
 
 static void _cmd_shell_init_module(void)
 {
@@ -81,19 +82,18 @@ void cmd_shell_init(void)
 
 void cmd_shell_loop(void)
 {
-
   /*
    * Use main() thread to spawn shells.
    */
-  while (true) {
+  while (true)
+  {
     if (USB_SERIAL_DRIVER_HANDLE.config->usbp->state == USB_ACTIVE)
     {
-      thread_t *shelltp = chThdCreateFromHeap(NULL,
-          THD_WORKING_AREA_SIZE(CMD_SHELL_WA_SIZE),
-          "shell", CMD_SHELL_PRIO,
-          shellThread, (void *)&_cmd_shell_cfg);
+      thread_t *shelltp =
+          chThdCreateFromHeap(NULL, THD_WORKING_AREA_SIZE(CMD_SHELL_WA_SIZE), "shell",
+                              CMD_SHELL_PRIO, shellThread, (void *)&_cmd_shell_cfg);
 
-      chThdWait(shelltp);               /* Waiting termination.             */
+      chThdWait(shelltp); /* Waiting termination.             */
     }
     chThdSleepMilliseconds(1000);
   }
