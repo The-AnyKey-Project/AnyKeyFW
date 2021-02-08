@@ -8,4 +8,6 @@
 #ifndef INC_TYPES_HAL_USB_TYPES_H_
 #define INC_TYPES_HAL_USB_TYPES_H_
 
+#define USB_DESC_CHAR_PADDED(X) X, '\0'
+
 #endif /* INC_TYPES_HAL_USB_TYPES_H_ */

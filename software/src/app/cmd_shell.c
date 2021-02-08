@@ -49,7 +49,7 @@ static const ShellCommand _cmd_shell_cmds[] = {
 };
 
 static const ShellConfig _cmd_shell_cfg = {
-  (BaseSequentialStream *)&USB_SERIAL_DRIVER_HANDLE,
+  (BaseSequentialStream *)&USB_VCOM_DRIVER_HANDLE,
   _cmd_shell_cmds
 };
 // clang-format on
@@ -87,7 +87,7 @@ void cmd_shell_loop(void)
    */
   while (true)
   {
-    if (USB_SERIAL_DRIVER_HANDLE.config->usbp->state == USB_ACTIVE)
+    if (USB_VCOM_DRIVER_HANDLE.config->usbp->state == USB_ACTIVE)
     {
       thread_t *shelltp =
           chThdCreateFromHeap(NULL, THD_WORKING_AREA_SIZE(CMD_SHELL_WA_SIZE), "shell",
