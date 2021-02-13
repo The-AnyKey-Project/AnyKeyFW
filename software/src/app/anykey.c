@@ -82,10 +82,10 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
         switch (dest[sw_id])
         {
           case KEYPAD_EVENT_PRESS:
-            _anykey_handle_action(_anykey_current_layer->key_actions[sw_id], KEYPAD_EVENT_PRESS);
+            _anykey_handle_action(_anykey_current_layer->key_actions_press[sw_id]);
             break;
           case KEYPAD_EVENT_RELEASE:
-            _anykey_handle_action(_anykey_current_layer->key_actions[sw_id], KEYPAD_EVENT_PRESS);
+            _anykey_handle_action(_anykey_current_layer->key_actions_release[sw_id]);
             break;
           case KEYPAD_EVENT_NONE:
           default:
@@ -123,69 +123,46 @@ static void _anykey_set_layer(anykey_layer_t *layer)
   }
 }
 
-static void _anykey_handle_action(anykey_action_list_t *action_list, keypad_event_t event)
+static void _anykey_handle_action(anykey_action_list_t *action_list)
 {
   uint8_t i = 0;
   while (i < action_list->length)
   {
     switch (action_list->actions[i])
     {
-      case ANYKEY_ACTION_KEY:
-        switch (event)
-        {
-          case KEYPAD_EVENT_PRESS:
-            // TODO
-            break;
-          case KEYPAD_EVENT_RELEASE:
-            // TODO
-            break;
-          case KEYPAD_EVENT_NONE:
-          default:
-            break;
-        }
+      case ANYKEY_ACTION_KEY_PRESS:
+        // TODO
         i += 2;
         break;
-      case ANYKEY_ACTION_KEY_EXT:
-        switch (event)
-        {
-          case KEYPAD_EVENT_PRESS:
-            // TODO
-            break;
-          case KEYPAD_EVENT_RELEASE:
-            // TODO
-            break;
-          case KEYPAD_EVENT_NONE:
-          default:
-            break;
-        }
+      case ANYKEY_ACTION_KEYEXT_PRESS:
+        // TODO
+        i += 3;
+        break;
+      case ANYKEY_ACTION_KEY_RELEASE:
+        // TODO
+        i += 2;
+        break;
+      case ANYKEY_ACTION_KEYEXT_RELEASE:
+        // TODO
         i += 3;
         break;
       case ANYKEY_ACTION_NEXT_LAYER:
-        if (event == KEYPAD_EVENT_RELEASE)
-        {
-          _anykey_set_layer(_anykey_current_layer->next);
-        }
+        _anykey_set_layer(_anykey_current_layer->next);
         i += 1;
         break;
       case ANYKEY_ACTION_PREV_LAYER:
-        if (event == KEYPAD_EVENT_RELEASE)
-        {
-          _anykey_set_layer(_anykey_current_layer->prev);
-        }
+        _anykey_set_layer(_anykey_current_layer->prev);
         i += 1;
         break;
       case ANYKEY_ACTION_ADJUST_CONTRAST:
-        if (event == KEYPAD_EVENT_RELEASE)
+        int8_t adjust = *((int8_t *)&action_list->actions[i]);
+        uint8_t sw_id = 0;
+        for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
         {
-          int8_t adjust = *((int8_t *)&action_list->actions[i]);
-          uint8_t sw_id = 0;
-          for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
-          {
-            int16_t new_value = _anykey_current_display_contrast[sw_id];
-            new_value += adjust;
-            new_value = (new_value > 255) ? 255 : ((new_value < 0) ? 0 : new_value);
-            glcd_set_contrast((glcd_display_id_t)sw_id, (uint8_t)new_value);
-          }
+          int16_t new_value = _anykey_current_display_contrast[sw_id];
+          new_value += adjust;
+          new_value = (new_value > 255) ? 255 : ((new_value < 0) ? 0 : new_value);
+          glcd_set_contrast((glcd_display_id_t)sw_id, (uint8_t)new_value);
         }
         i += 2;
         break;

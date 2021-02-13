@@ -12,8 +12,10 @@
 
 typedef enum
 {
-  ANYKEY_ACTION_KEY = 0,
-  ANYKEY_ACTION_KEY_EXT,
+  ANYKEY_ACTION_KEY_PRESS = 0,
+  ANYKEY_ACTION_KEYEXT_PRESS,
+  ANYKEY_ACTION_KEY_RELEASE,
+  ANYKEY_ACTION_KEYEXT_RELEASE,
   ANYKEY_ACTION_NEXT_LAYER,
   ANYKEY_ACTION_PREV_LAYER,
   ANYKEY_ACTION_ADJUST_CONTRAST
@@ -31,7 +33,8 @@ typedef struct _anykey_layer_t
   struct _anykey_layer_t* prev;
   char* name;
   glcd_display_buffer_t displays[ANYKEY_NUMBER_OF_KEYS];
-  anykey_action_list_t* key_actions[ANYKEY_NUMBER_OF_KEYS];
+  anykey_action_list_t* key_actions_press[ANYKEY_NUMBER_OF_KEYS];
+  anykey_action_list_t* key_actions_release[ANYKEY_NUMBER_OF_KEYS];
 } anykey_layer_t;
 
 #endif /* INC_TYPES_APP_ANYKEY_TYPES_H_ */
