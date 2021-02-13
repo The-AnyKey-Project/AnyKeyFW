@@ -155,6 +155,7 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
         i += 1;
         break;
       case ANYKEY_ACTION_ADJUST_CONTRAST:
+      {
         int8_t adjust = *((int8_t *)&action_list->actions[i]);
         uint8_t sw_id = 0;
         for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
@@ -165,7 +166,8 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
           glcd_set_contrast((glcd_display_id_t)sw_id, (uint8_t)new_value);
         }
         i += 2;
-        break;
+      }
+      break;
       default:
         i++;
         break;
