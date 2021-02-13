@@ -42,7 +42,7 @@ static_assert(ANYKEY_NUMBER_OF_KEYS == (GLCD_DISP_MAX),
 static void _anykey_init_hal(void);
 static void _anykey_init_module(void);
 static void _anykey_set_layer(anykey_layer_t *layer);
-static void _anykey_handle_action(anykey_action_list_t *action_list, keypad_event_t event);
+static void _anykey_handle_action(anykey_action_list_t *action_list);
 
 /*
  * Static variables
