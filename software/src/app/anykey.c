@@ -126,51 +126,54 @@ static void _anykey_set_layer(anykey_layer_t *layer)
 static void _anykey_handle_action(anykey_action_list_t *action_list)
 {
   uint8_t i = 0;
-  while (i < action_list->length)
+  if (action_list)
   {
-    switch (action_list->actions[i])
+    while (i < action_list->length)
     {
-      case ANYKEY_ACTION_KEY_PRESS:
-        // TODO
-        i += 2;
-        break;
-      case ANYKEY_ACTION_KEYEXT_PRESS:
-        // TODO
-        i += 3;
-        break;
-      case ANYKEY_ACTION_KEY_RELEASE:
-        // TODO
-        i += 2;
-        break;
-      case ANYKEY_ACTION_KEYEXT_RELEASE:
-        // TODO
-        i += 3;
-        break;
-      case ANYKEY_ACTION_NEXT_LAYER:
-        _anykey_set_layer(_anykey_current_layer->next);
-        i += 1;
-        break;
-      case ANYKEY_ACTION_PREV_LAYER:
-        _anykey_set_layer(_anykey_current_layer->prev);
-        i += 1;
-        break;
-      case ANYKEY_ACTION_ADJUST_CONTRAST:
+      switch (action_list->actions[i])
       {
-        int8_t adjust = *((int8_t *)&action_list->actions[i]);
-        uint8_t sw_id = 0;
-        for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
+        case ANYKEY_ACTION_KEY_PRESS:
+          // TODO
+          i += 2;
+          break;
+        case ANYKEY_ACTION_KEYEXT_PRESS:
+          // TODO
+          i += 3;
+          break;
+        case ANYKEY_ACTION_KEY_RELEASE:
+          // TODO
+          i += 2;
+          break;
+        case ANYKEY_ACTION_KEYEXT_RELEASE:
+          // TODO
+          i += 3;
+          break;
+        case ANYKEY_ACTION_NEXT_LAYER:
+          _anykey_set_layer(_anykey_current_layer->next);
+          i += 1;
+          break;
+        case ANYKEY_ACTION_PREV_LAYER:
+          _anykey_set_layer(_anykey_current_layer->prev);
+          i += 1;
+          break;
+        case ANYKEY_ACTION_ADJUST_CONTRAST:
         {
-          int16_t new_value = _anykey_current_display_contrast[sw_id];
-          new_value += adjust;
-          new_value = (new_value > 255) ? 255 : ((new_value < 0) ? 0 : new_value);
-          glcd_set_contrast((glcd_display_id_t)sw_id, (uint8_t)new_value);
+          int8_t adjust = *((int8_t *)&action_list->actions[i]);
+          uint8_t sw_id = 0;
+          for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
+          {
+            int16_t new_value = _anykey_current_display_contrast[sw_id];
+            new_value += adjust;
+            new_value = (new_value > 255) ? 255 : ((new_value < 0) ? 0 : new_value);
+            glcd_set_contrast((glcd_display_id_t)sw_id, (uint8_t)new_value);
+          }
+          i += 2;
         }
-        i += 2;
-      }
-      break;
-      default:
-        i++;
         break;
+        default:
+          i++;
+          break;
+      }
     }
   }
 }
