@@ -13,6 +13,6 @@
 
 extern void usb_init(void);
 
-extern SerialUSBDriver USB_VCOM_DRIVER_HANDLE;
+extern SerialUSBDriver USB_CDC_DRIVER_HANDLE;
 
 #endif /* INC_API_USB_HID_H_ */
