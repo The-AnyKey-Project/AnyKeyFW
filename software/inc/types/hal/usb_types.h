@@ -41,8 +41,16 @@ typedef enum
 
 typedef enum
 {
-  USB_CDC_DATA_AVAILABLE_EPS_OUT = 0,
+  USB_HID_RAW_EPS_OUT = 0,
+  USB_CDC_DATA_AVAILABLE_EPS_OUT,
   USB_NUM_OUT_EPS
 } usb_ep_out_state_id_t;
+
+#define USB_CALLBACK_STUB(fname)          \
+  void fname(USBDriver *usbp, usbep_t ep) \
+  {                                       \
+    (void)usbp;                           \
+    (void)ep;                             \
+  }
 
 #endif /* INC_TYPES_HAL_USB_TYPES_H_ */

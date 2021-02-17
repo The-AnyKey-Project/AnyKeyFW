@@ -28,14 +28,16 @@
  */
 static void _usb_init_hal(void);
 static void _usb_init_module(void);
+static bool _usb_request_hook_hid(USBDriver *usbp);
 static void _usb_event_cb(USBDriver *usbp, usbevent_t event);
 static const USBDescriptor *_usb_get_descriptor_cb(USBDriver *usbp, uint8_t dtype, uint8_t dindex,
                                                    uint16_t lang);
 static bool _usb_request_hook_cb(USBDriver *usbp);
 static void _usb_sof_cb(USBDriver *usbp);
-static void _usb_hid_kbd_in_cb(USBDriver *usbp, usbep_t ep);
-static void _usb_hid_kbdext_in_cb(USBDriver *usbp, usbep_t ep);
-static void _usb_hid_raw_in_cb(USBDriver *usbp, usbep_t ep);
+static USB_CALLBACK_STUB(_usb_hid_kbd_in_cb);
+static USB_CALLBACK_STUB(_usb_hid_kbdext_in_cb);
+static USB_CALLBACK_STUB(_usb_hid_raw_in_cb);
+static USB_CALLBACK_STUB(_usb_hid_raw_out_cb);
 
 /*
  * Static variables
@@ -108,9 +110,6 @@ static const uint8_t _usb_hid_kbd_report_desc_data[] = {
     0x81, 0x00,                      //   Input (Data, Array),
     0xc0                             // End Collection
 };
-/* wrapper */
-static const USBDescriptor _usb_hid_kbd_report_descriptor = {sizeof _usb_hid_kbd_report_desc_data,
-                                                             _usb_hid_kbd_report_desc_data};
 
 /* audio controls & system controls
  * http://www.microsoft.com/whdc/archive/w2kbd.mspx */
@@ -142,9 +141,6 @@ static const uint8_t _usb_hid_kbdext_report_desc_data[] = {
     0x81, 0x00,                        //   INPUT (Data,Array,Abs)
     0xc0,                              // END_COLLECTION
 };
-/* wrapper */
-static const USBDescriptor _usb_hid_kbdext_report_descriptor = {
-    sizeof _usb_hid_kbdext_report_desc_data, _usb_hid_kbdext_report_desc_data};
 
 static const uint8_t _usb_hid_raw_report_desc_data[] = {
     0x06, 0x31,
@@ -160,7 +156,13 @@ static const uint8_t _usb_hid_raw_report_desc_data[] = {
     0x81, 0x02,                // Input (array)
     0xC0                       // end collection
 };
-/* wrapper */
+/*
+ * wrapper
+ */
+static const USBDescriptor _usb_hid_kbd_report_descriptor = {sizeof _usb_hid_kbd_report_desc_data,
+                                                             _usb_hid_kbd_report_desc_data};
+static const USBDescriptor _usb_hid_kbdext_report_descriptor = {
+    sizeof _usb_hid_kbdext_report_desc_data, _usb_hid_kbdext_report_desc_data};
 static const USBDescriptor _usb_hid_raw_report_descriptor = {sizeof _usb_hid_raw_report_desc_data,
                                                              _usb_hid_raw_report_desc_data};
 
@@ -176,12 +178,12 @@ static const USBDescriptor _usb_hid_raw_report_descriptor = {sizeof _usb_hid_raw
 
 static const uint8_t _usb_configuration_descriptor_data[] = {
     /* Configuration Descriptor (9 bytes) USB spec 9.6.3, page 264-266, Table 9-10 */
-    USB_DESC_CONFIGURATION(USB_CONFIG_DESC_SIZE,  // wTotalLength
-                           USB_NUM_INTERFACES,    // bNumInterfaces
-                           1,                     // bConfigurationValue
-                           0,                     // iConfiguration
-                           0xA0,                  // bmAttributes (RESERVED|REMOTEWAKEUP)
-                           250),                  // bMaxPower (500mA)
+    USB_DESC_CONFIGURATION(USB_CONFIG_DESC_DATA_SIZE,  // wTotalLength
+                           USB_NUM_INTERFACES,         // bNumInterfaces
+                           1,                          // bConfigurationValue
+                           0,                          // iConfiguration
+                           0xA0,                       // bmAttributes (RESERVED|REMOTEWAKEUP)
+                           250),                       // bMaxPower (500mA)
 
     USB_DESC_INTERFACE_ASSOCIATION(USB_HID_KBD_INTERFACE, /* bFirstInterface.         */
                                    3,                     /* bInterfaceCount.         */
@@ -201,13 +203,13 @@ static const uint8_t _usb_configuration_descriptor_data[] = {
                        0),                     // iInterface
 
     /* HID descriptor (9 bytes) HID 1.11 spec, section 6.2.1 */
-    USB_DESC_BYTE(9),                                       // bLength
-    USB_DESC_BYTE(0x21),                                    // bDescriptorType (HID class)
-    USB_DESC_BCD(0x0111),                                   // bcdHID: HID version 1.11
-    USB_DESC_BYTE(0),                                       // bCountryCode
-    USB_DESC_BYTE(1),                                       // bNumDescriptors
-    USB_DESC_BYTE(0x22),                                    // bDescriptorType (report desc)
-    USB_DESC_WORD(sizeof(_usb_hid_kbd_report_descriptor)),  // wDescriptorLength
+    USB_DESC_BYTE(9),                                      // bLength
+    USB_DESC_BYTE(0x21),                                   // bDescriptorType (HID class)
+    USB_DESC_BCD(0x0111),                                  // bcdHID: HID version 1.11
+    USB_DESC_BYTE(0),                                      // bCountryCode
+    USB_DESC_BYTE(1),                                      // bNumDescriptors
+    USB_DESC_BYTE(0x22),                                   // bDescriptorType (report desc)
+    USB_DESC_WORD(sizeof(_usb_hid_kbd_report_desc_data)),  // wDescriptorLength
 
     /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
     USB_DESC_ENDPOINT(USB_HID_KBD_EP | 0x80,  // bEndpointAddress
@@ -225,13 +227,13 @@ static const uint8_t _usb_configuration_descriptor_data[] = {
                        0),                        // iInterface
 
     /* HID descriptor (9 bytes) HID 1.11 spec, section 6.2.1 */
-    USB_DESC_BYTE(9),                                          // bLength
-    USB_DESC_BYTE(0x21),                                       // bDescriptorType (HID class)
-    USB_DESC_BCD(0x0111),                                      // bcdHID: HID version 1.11
-    USB_DESC_BYTE(0),                                          // bCountryCode
-    USB_DESC_BYTE(1),                                          // bNumDescriptors
-    USB_DESC_BYTE(0x22),                                       // bDescriptorType (report desc)
-    USB_DESC_WORD(sizeof(_usb_hid_kbdext_report_descriptor)),  // wDescriptorLength
+    USB_DESC_BYTE(9),                                         // bLength
+    USB_DESC_BYTE(0x21),                                      // bDescriptorType (HID class)
+    USB_DESC_BCD(0x0111),                                     // bcdHID: HID version 1.11
+    USB_DESC_BYTE(0),                                         // bCountryCode
+    USB_DESC_BYTE(1),                                         // bNumDescriptors
+    USB_DESC_BYTE(0x22),                                      // bDescriptorType (report desc)
+    USB_DESC_WORD(sizeof(_usb_hid_kbdext_report_desc_data)),  // wDescriptorLength
 
     /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
     USB_DESC_ENDPOINT(USB_HID_KBDEXT_EP | 0x80,  // bEndpointAddress
@@ -242,21 +244,26 @@ static const uint8_t _usb_configuration_descriptor_data[] = {
     /* Interface Descriptor (9 bytes) USB spec 9.6.5, page 267-269, Table 9-12 */
     USB_DESC_INTERFACE(USB_HID_RAW_INTERFACE,  // bInterfaceNumber
                        0,                      // bAlternateSetting
-                       1,                      // bNumEndpoints
+                       2,                      // bNumEndpoints
                        0x03,                   // bInterfaceClass: HID
                        0x00,                   // bInterfaceSubClass: None
                        0x00,                   // bInterfaceProtocol: None
                        0),                     // iInterface
 
     /* HID descriptor (9 bytes) HID 1.11 spec, section 6.2.1 */
-    USB_DESC_BYTE(9),                                       // bLength
-    USB_DESC_BYTE(0x21),                                    // bDescriptorType (HID class)
-    USB_DESC_BCD(0x0111),                                   // bcdHID: HID version 1.11
-    USB_DESC_BYTE(0),                                       // bCountryCode
-    USB_DESC_BYTE(1),                                       // bNumDescriptors
-    USB_DESC_BYTE(0x22),                                    // bDescriptorType (report desc)
-    USB_DESC_WORD(sizeof(_usb_hid_raw_report_descriptor)),  // wDescriptorLength
+    USB_DESC_BYTE(9),                                      // bLength
+    USB_DESC_BYTE(0x21),                                   // bDescriptorType (HID class)
+    USB_DESC_BCD(0x0111),                                  // bcdHID: HID version 1.11
+    USB_DESC_BYTE(0),                                      // bCountryCode
+    USB_DESC_BYTE(1),                                      // bNumDescriptors
+    USB_DESC_BYTE(0x22),                                   // bDescriptorType (report desc)
+    USB_DESC_WORD(sizeof(_usb_hid_raw_report_desc_data)),  // wDescriptorLength
 
+    /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
+    USB_DESC_ENDPOINT(USB_HID_RAW_EP,      // bEndpointAddress
+                      0x03,                // bmAttributes (Interrupt)
+                      USB_HID_RAW_EPSIZE,  // wMaxPacketSize
+                      10),                 // bInterval
     /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
     USB_DESC_ENDPOINT(USB_HID_RAW_EP | 0x80,  // bEndpointAddress
                       0x03,                   // bmAttributes (Interrupt)
@@ -272,17 +279,17 @@ static const uint8_t _usb_configuration_descriptor_data[] = {
                                    ),
 
     /* Interface Descriptor.*/
-    USB_DESC_INTERFACE(USB_CDC_INT_INTERFACE, /* bInterfaceNumber.                */
-                       0x00,                  /* bAlternateSetting.               */
-                       0x01,                  /* bNumEndpoints.                   */
-                       0x02,                  /* bInterfaceClass (Communications
-                                                 Interface Class, CDC section
-                                                 4.2).                            */
-                       0x02,                  /* bInterfaceSubClass (Abstract
-                                               Control Model, CDC section 4.3).   */
-                       0x01,                  /* bInterfaceProtocol (AT commands,
-                                                 CDC section 4.4).                */
-                       0),                    /* iInterface.                      */
+    USB_DESC_INTERFACE(USB_CDC_INT_INTERFACE,             /* bInterfaceNumber.                */
+                       0x00,                              /* bAlternateSetting.               */
+                       0x01,                              /* bNumEndpoints.                   */
+                       CDC_COMMUNICATION_INTERFACE_CLASS, /* bInterfaceClass (Communications */
+                                                          /* Interface Class, CDC section */
+                                                          /* 4.2).                            */
+                       CDC_ABSTRACT_CONTROL_MODEL,        /* bInterfaceSubClass (Abstract */
+                                                          /* Control Model, CDC section 4.3).   */
+                       0x01,                              /* bInterfaceProtocol (AT commands,
+                                                             CDC section 4.4).                */
+                       0),                                /* iInterface.                      */
 
     /* Header Functional Descriptor (CDC section 5.2.3).*/
     USB_DESC_BYTE(5),    /* bLength.                         */
@@ -372,8 +379,12 @@ static const uint8_t _usb_desc_string0[] = {
  * Vendor string.
  */
 static const uint8_t _usb_desc_string1[] = {
-    USB_DESC_BYTE(44),                    /* bLength.                         */
+    USB_DESC_BYTE(38),                    /* bLength.                         */
     USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
+    USB_DESC_CHAR_PADDED('T'),
+    USB_DESC_CHAR_PADDED('h'),
+    USB_DESC_CHAR_PADDED('e'),
+    USB_DESC_CHAR_PADDED(' '),
     USB_DESC_CHAR_PADDED('A'),
     USB_DESC_CHAR_PADDED('n'),
     USB_DESC_CHAR_PADDED('y'),
@@ -381,27 +392,20 @@ static const uint8_t _usb_desc_string1[] = {
     USB_DESC_CHAR_PADDED('e'),
     USB_DESC_CHAR_PADDED('y'),
     USB_DESC_CHAR_PADDED(' '),
-    USB_DESC_CHAR_PADDED('M'),
-    USB_DESC_CHAR_PADDED('a'),
-    USB_DESC_CHAR_PADDED('c'),
+    USB_DESC_CHAR_PADDED('P'),
     USB_DESC_CHAR_PADDED('r'),
     USB_DESC_CHAR_PADDED('o'),
-    USB_DESC_CHAR_PADDED(' '),
-    USB_DESC_CHAR_PADDED('K'),
+    USB_DESC_CHAR_PADDED('j'),
     USB_DESC_CHAR_PADDED('e'),
-    USB_DESC_CHAR_PADDED('y'),
-    USB_DESC_CHAR_PADDED('b'),
-    USB_DESC_CHAR_PADDED('o'),
-    USB_DESC_CHAR_PADDED('a'),
-    USB_DESC_CHAR_PADDED('r'),
-    USB_DESC_CHAR_PADDED('d'),
+    USB_DESC_CHAR_PADDED('c'),
+    USB_DESC_CHAR_PADDED('t'),
 };
 
 /*
  * Device Description string.
  */
 static const uint8_t _usb_desc_string2[] = {
-    USB_DESC_BYTE(74),                    /* bLength.                         */
+    USB_DESC_BYTE(72),                    /* bLength.                         */
     USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
     USB_DESC_CHAR_PADDED('C'),
     USB_DESC_CHAR_PADDED('o'),
@@ -479,14 +483,14 @@ static const USBEndpointConfig _usb_ep_configs[] = {
      &_usb_ep_in_states[USB_HID_KBD_EPS_IN], NULL, 2, NULL},
     {USB_EP_MODE_TYPE_INTR, NULL, _usb_hid_kbdext_in_cb, NULL, USB_HID_KBDEXT_EPSIZE, 0x0000,
      &_usb_ep_in_states[USB_HID_KBDEXT_EPS_IN], NULL, 2, NULL},
-    {USB_EP_MODE_TYPE_INTR, NULL, _usb_hid_raw_in_cb, NULL, USB_HID_RAW_EPSIZE, 0x0000,
-     &_usb_ep_in_states[USB_HID_RAW_EPS_IN], NULL, 2, NULL},
+    {USB_EP_MODE_TYPE_INTR, NULL, _usb_hid_raw_in_cb, _usb_hid_raw_out_cb, USB_HID_RAW_EPSIZE, USB_HID_RAW_EPSIZE,
+     &_usb_ep_in_states[USB_HID_RAW_EPS_IN], &_usb_ep_out_states[USB_HID_RAW_EPS_OUT], 2, NULL},
     {USB_EP_MODE_TYPE_INTR, NULL, sduInterruptTransmitted, NULL, 0x0010, 0x0000,
      &_usb_ep_in_states[USB_CDC_INT_REQUEST_EPS_IN], NULL, 2, NULL},
     {USB_EP_MODE_TYPE_BULK, NULL, sduDataTransmitted, sduDataReceived, 0x0040, 0x0040,
      &_usb_ep_in_states[USB_CDC_DATA_REQUEST_EPS_IN], &_usb_ep_out_states[USB_CDC_DATA_AVAILABLE_EPS_OUT], 2, NULL},
 };
-// clang-format off
+// clang-format on
 
 /*
  * Global variables
@@ -533,6 +537,150 @@ static void _usb_init_module(void)
 #endif
   usbStart(&USB_DRIVER_HANDLE, &usbcfg);
   usbConnectBus(&USB_DRIVER_HANDLE);
+}
+
+static bool _usb_request_hook_hid(USBDriver *usbp)
+{
+  const USBDescriptor *dp;
+
+  /* usbp->setup fields:
+   *  0:   bmRequestType (bitmask)
+   *  1:   bRequest
+   *  2,3: (LSB,MSB) wValue
+   *  4,5: (LSB,MSB) wIndex
+   *  6,7: (LSB,MSB) wLength (number of bytes to transfer if there is a data phase) */
+
+  /* Handle HID class specific requests */
+  if (((usbp->setup[0] & USB_RTYPE_TYPE_MASK) == USB_RTYPE_TYPE_CLASS) &&
+      ((usbp->setup[0] & USB_RTYPE_RECIPIENT_MASK) == USB_RTYPE_RECIPIENT_INTERFACE))
+  {
+    switch (usbp->setup[0] & USB_RTYPE_DIR_MASK)
+    {
+      case USB_RTYPE_DIR_DEV2HOST:
+        switch (usbp->setup[1])
+        { /* bRequest */
+          case USB_HID_GET_REPORT:
+            switch (usbp->setup[4])
+            { /* LSB(wIndex) (check MSB==0?) */
+              case USB_HID_KBD_INTERFACE:
+                //                usbSetupTransfer(usbp, (uint8_t *)&keyboard_report_sent,
+                //                                 sizeof(keyboard_report_sent), NULL);
+                return TRUE;
+                break;
+
+              case USB_HID_KBDEXT_INTERFACE:
+                if (usbp->setup[3] == 1)
+                { /* MSB(wValue) [Report Type] == 1 [Input Report] */
+                  switch (usbp->setup[2])
+                  { /* LSB(wValue) [Report ID] */
+                    case USB_HID_REPORT_ID_SYSTEM:
+                      //                      extra_report_blank[0] = REPORT_ID_SYSTEM;
+                      //                      usbSetupTransfer(usbp, (uint8_t *)extra_report_blank,
+                      //                                       sizeof(extra_report_blank), NULL);
+                      return TRUE;
+                      break;
+                    case USB_HID_REPORT_ID_CONSUMER:
+                      //                      extra_report_blank[0] = REPORT_ID_CONSUMER;
+                      //                      usbSetupTransfer(usbp, (uint8_t *)extra_report_blank,
+                      //                                       sizeof(extra_report_blank), NULL);
+                      return TRUE;
+                      break;
+                    default:
+                      return FALSE;
+                  }
+                }
+                else
+                {
+                  return FALSE;
+                }
+                break;
+              default:
+                usbSetupTransfer(usbp, NULL, 0, NULL);
+                return TRUE;
+                break;
+            }
+            break;
+
+          case USB_HID_GET_PROTOCOL:
+            //            if ((usbp->setup[4] == USB_HID_KBD_INTERFACE) && (usbp->setup[5] == 0))
+            //            { /* wIndex */
+            //              usbSetupTransfer(usbp, &keyboard_protocol, 1, NULL);
+            //              return TRUE;
+            //            }
+            break;
+
+          case USB_HID_GET_IDLE:
+            //            usbSetupTransfer(usbp, &keyboard_idle, 1, NULL);
+            //            return TRUE;
+            break;
+        }
+        break;
+
+      case USB_RTYPE_DIR_HOST2DEV:
+        switch (usbp->setup[1])
+        { /* bRequest */
+          case USB_HID_SET_REPORT:
+            switch (usbp->setup[4])
+            { /* LSB(wIndex) (check MSB==0 and wLength==1?) */
+              //              case USB_HID_KBD_INTERFACE:
+              //                /* keyboard_led_stats = <read byte from next OUT report>
+              //                 * keyboard_led_stats needs be word (or dword), otherwise we get an
+              //                 exception on F0
+              //                 */
+              //                usbSetupTransfer(usbp, (uint8_t *)&keyboard_led_stats, 1, NULL);
+              //                return TRUE;
+              break;
+            }
+            break;
+
+          case USB_HID_SET_PROTOCOL:
+            //            if ((usbp->setup[4] == KBD_INTERFACE) && (usbp->setup[5] == 0))
+            //            {                                                 /* wIndex */
+            //              keyboard_protocol = ((usbp->setup[2]) != 0x00); /* LSB(wValue) */
+            //              if (keyboard_idle)
+            //              {
+            //                /* arm the idle timer if boot protocol & idle */
+            //                osalSysLockFromISR();
+            //                chVTSetI(&keyboard_idle_timer, 4 * MS2ST(keyboard_idle),
+            //                keyboard_idle_timer_cb,
+            //                         (void *)usbp);
+            //                osalSysUnlockFromISR();
+            //              }
+            //            }
+            usbSetupTransfer(usbp, NULL, 0, NULL);
+            return TRUE;
+            break;
+
+          case USB_HID_SET_IDLE:
+            //            keyboard_idle = usbp->setup[3]; /* MSB(wValue) */
+            //                                            /* arm the timer */
+            //            if (keyboard_idle)
+            //            {
+            //              osalSysLockFromISR();
+            //              chVTSetI(&keyboard_idle_timer, 4 * MS2ST(keyboard_idle),
+            //              keyboard_idle_timer_cb,
+            //                       (void *)usbp);
+            //              osalSysUnlockFromISR();
+            //            }
+            usbSetupTransfer(usbp, NULL, 0, NULL);
+            return TRUE;
+            break;
+        }
+        break;
+    }
+  }
+
+  /* Handle the Get_Descriptor Request for HID class (not handled by the default hook) */
+  if ((usbp->setup[0] == 0x81) && (usbp->setup[1] == USB_REQ_GET_DESCRIPTOR))
+  {
+    dp = usbp->config->get_descriptor_cb(usbp, usbp->setup[3], usbp->setup[2],
+                                         ((usbp->setup[5] << 8) | usbp->setup[4]));
+    if (dp == NULL) return FALSE;
+    usbSetupTransfer(usbp, (uint8_t *)dp->ud_string, dp->ud_size, NULL);
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 /*
@@ -629,13 +777,26 @@ static const USBDescriptor *_usb_get_descriptor_cb(USBDriver *usbp, uint8_t dtyp
           return &_usb_hid_raw_report_descriptor;
       }
       break;
-      default:
-        break;
+    default:
+      break;
   }
   return NULL;
 }
 
-static bool _usb_request_hook_cb(USBDriver *usbp) { return sduRequestsHook(usbp); }
+static bool _usb_request_hook_cb(USBDriver *usbp)
+{
+  if (((usbp->setup[0] & USB_RTYPE_RECIPIENT_MASK) == USB_RTYPE_RECIPIENT_INTERFACE) &&
+      (usbp->setup[1] == USB_REQ_SET_INTERFACE))
+  {
+    usbSetupTransfer(usbp, NULL, 0, NULL);
+    return true;
+  }
+  if (_usb_request_hook_hid(usbp))
+  {
+    return TRUE;
+  }
+  return sduRequestsHook(usbp);
+}
 
 static void _usb_sof_cb(USBDriver *usbp)
 {
@@ -644,27 +805,6 @@ static void _usb_sof_cb(USBDriver *usbp)
   osalSysLockFromISR();
   sduSOFHookI(&USB_CDC_DRIVER_HANDLE);
   osalSysUnlockFromISR();
-}
-
-static void _usb_hid_kbd_in_cb(USBDriver *usbp, usbep_t ep)
-{
-  /* STUB */
-  (void)usbp;
-  (void)ep;
-}
-
-static void _usb_hid_kbdext_in_cb(USBDriver *usbp, usbep_t ep)
-{
-  /* STUB */
-  (void)usbp;
-  (void)ep;
-}
-
-static void _usb_hid_raw_in_cb(USBDriver *usbp, usbep_t ep)
-{
-  /* STUB */
-  (void)usbp;
-  (void)ep;
 }
 
 /*
