@@ -12,10 +12,12 @@
 #define USB_CDC_DRIVER_HANDLE      SDU1
 #define USB_VENDOR_ID              0xFEED
 #define USB_PRODUCT_ID             0xBABE
-#define USB_DEVICE_VER             0x0100
+#define USB_DEVICE_VER             0x0200
 #define USB_HID_KBD_EPSIZE         8
 #define USB_HID_KBDEXT_EPSIZE      8
 #define USB_HID_RAW_EPSIZE         16
+#define USB_CDC_INT_EPSIZE         8
+#define USB_CDC_DATA_EPSIZE        64
 #define USB_CONFIG_DESC_HID_SIZE   9
 #define USB_CONFIG_DESC_CDC_SIZE   19
 #define USB_DESCRIPTOR_CDC         0x24
