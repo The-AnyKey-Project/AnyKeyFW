@@ -8,19 +8,22 @@
 #ifndef INC_CFG_HAL_USB_CFG_H_
 #define INC_CFG_HAL_USB_CFG_H_
 
-#define USB_DRIVER_HANDLE          USBD1
-#define USB_CDC_DRIVER_HANDLE      SDU1
-#define USB_VENDOR_ID              0xFEED
-#define USB_PRODUCT_ID             0xBABE
-#define USB_DEVICE_VER             0x0200
-#define USB_HID_KBD_EPSIZE         8
-#define USB_HID_KBDEXT_EPSIZE      8
-#define USB_HID_RAW_EPSIZE         16
-#define USB_CDC_INT_EPSIZE         8
-#define USB_CDC_DATA_EPSIZE        64
-#define USB_CONFIG_DESC_HID_SIZE   9
-#define USB_CONFIG_DESC_CDC_SIZE   19
-#define USB_DESCRIPTOR_CDC         0x24
+#define USB_DRIVER_HANDLE        USBD1
+#define USB_CDC_DRIVER_HANDLE    SDU1
+#define USB_VENDOR_ID            0xFEED
+#define USB_PRODUCT_ID           0xBABE
+#define USB_DEVICE_VER           0x0200
+#define USB_HID_KBD_EPSIZE       8
+#define USB_HID_KBDEXT_EPSIZE    8
+#define USB_HID_RAW_EPSIZE       16
+#define USB_CDC_INT_EPSIZE       8
+#define USB_CDC_DATA_EPSIZE      64
+#define USB_CONFIG_DESC_HID_SIZE 9
+#define USB_CONFIG_DESC_CDC_SIZE 19
+#define USB_CONFIG_HID_CLASS     0x03
+#define USB_CONFIG_HID_SUBCLASS  0x01
+
+#define USB_DESCRIPTOR_CDC         CDC_CS_INTERFACE
 #define USB_DESCRIPTOR_HID         0x21
 #define USB_DESCRIPTOR_HID_REPORT  0x22
 #define USB_HID_REPORT_ID_SYSTEM   0x02

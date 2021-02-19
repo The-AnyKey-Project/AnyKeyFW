@@ -185,30 +185,30 @@ static const uint8_t _usb_configuration_descriptor_data[] = {
                            0xA0,                       // bmAttributes (RESERVED|REMOTEWAKEUP)
                            250),                       // bMaxPower (500mA)
 
-    USB_DESC_INTERFACE_ASSOCIATION(USB_HID_KBD_INTERFACE, /* bFirstInterface.         */
-                                   3,                     /* bInterfaceCount.         */
-                                   0x03,                  /* bFunctionClass.          */
-                                   0x01,                  /* bFunctionSubClass.       */
-                                   1,                     /* bFunctionProcotol.       */
-                                   0                      /* iInterface.              */
+    USB_DESC_INTERFACE_ASSOCIATION(USB_HID_KBD_INTERFACE,   /* bFirstInterface.         */
+                                   3,                       /* bInterfaceCount.         */
+                                   USB_CONFIG_HID_CLASS,    /* bFunctionClass.          */
+                                   USB_CONFIG_HID_SUBCLASS, /* bFunctionSubClass.       */
+                                   1,                       /* bFunctionProcotol.       */
+                                   0                        /* iInterface.              */
                                    ),
 
     /* Interface Descriptor (9 bytes) USB spec 9.6.5, page 267-269, Table 9-12 */
-    USB_DESC_INTERFACE(USB_HID_KBD_INTERFACE,  // bInterfaceNumber
-                       0,                      // bAlternateSetting
-                       1,                      // bNumEndpoints
-                       0x03,                   // bInterfaceClass: HID
-                       0x01,                   // bInterfaceSubClass: Boot
-                       0x01,                   // bInterfaceProtocol: Keyboard
-                       0),                     // iInterface
+    USB_DESC_INTERFACE(USB_HID_KBD_INTERFACE,    // bInterfaceNumber
+                       0,                        // bAlternateSetting
+                       1,                        // bNumEndpoints
+                       USB_CONFIG_HID_CLASS,     // bInterfaceClass: HID
+                       USB_CONFIG_HID_SUBCLASS,  // bInterfaceSubClass: Boot
+                       0x01,                     // bInterfaceProtocol: Keyboard
+                       0),                       // iInterface
 
     /* HID descriptor (9 bytes) HID 1.11 spec, section 6.2.1 */
     USB_DESC_BYTE(9),                                      // bLength
-    USB_DESC_BYTE(0x21),                                   // bDescriptorType (HID class)
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID),                     // bDescriptorType (HID class)
     USB_DESC_BCD(0x0111),                                  // bcdHID: HID version 1.11
     USB_DESC_BYTE(0),                                      // bCountryCode
     USB_DESC_BYTE(1),                                      // bNumDescriptors
-    USB_DESC_BYTE(0x22),                                   // bDescriptorType (report desc)
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID_REPORT),              // bDescriptorType (report desc)
     USB_DESC_WORD(sizeof(_usb_hid_kbd_report_desc_data)),  // wDescriptorLength
 
     /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
@@ -221,18 +221,18 @@ static const uint8_t _usb_configuration_descriptor_data[] = {
     USB_DESC_INTERFACE(USB_HID_KBDEXT_INTERFACE,  // bInterfaceNumber
                        0,                         // bAlternateSetting
                        1,                         // bNumEndpoints
-                       0x03,                      // bInterfaceClass: HID
+                       USB_CONFIG_HID_CLASS,      // bInterfaceClass: HID
                        0x00,                      // bInterfaceSubClass: None
                        0x00,                      // bInterfaceProtocol: None
                        0),                        // iInterface
 
     /* HID descriptor (9 bytes) HID 1.11 spec, section 6.2.1 */
     USB_DESC_BYTE(9),                                         // bLength
-    USB_DESC_BYTE(0x21),                                      // bDescriptorType (HID class)
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID),                        // bDescriptorType (HID class)
     USB_DESC_BCD(0x0111),                                     // bcdHID: HID version 1.11
     USB_DESC_BYTE(0),                                         // bCountryCode
     USB_DESC_BYTE(1),                                         // bNumDescriptors
-    USB_DESC_BYTE(0x22),                                      // bDescriptorType (report desc)
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID_REPORT),                 // bDescriptorType (report desc)
     USB_DESC_WORD(sizeof(_usb_hid_kbdext_report_desc_data)),  // wDescriptorLength
 
     /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
@@ -245,18 +245,18 @@ static const uint8_t _usb_configuration_descriptor_data[] = {
     USB_DESC_INTERFACE(USB_HID_RAW_INTERFACE,  // bInterfaceNumber
                        0,                      // bAlternateSetting
                        2,                      // bNumEndpoints
-                       0x03,                   // bInterfaceClass: HID
+                       USB_CONFIG_HID_CLASS,   // bInterfaceClass: HID
                        0x00,                   // bInterfaceSubClass: None
                        0x00,                   // bInterfaceProtocol: None
                        0),                     // iInterface
 
     /* HID descriptor (9 bytes) HID 1.11 spec, section 6.2.1 */
     USB_DESC_BYTE(9),                                      // bLength
-    USB_DESC_BYTE(0x21),                                   // bDescriptorType (HID class)
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID),                     // bDescriptorType (HID class)
     USB_DESC_BCD(0x0111),                                  // bcdHID: HID version 1.11
     USB_DESC_BYTE(0),                                      // bCountryCode
     USB_DESC_BYTE(1),                                      // bNumDescriptors
-    USB_DESC_BYTE(0x22),                                   // bDescriptorType (report desc)
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID_REPORT),              // bDescriptorType (report desc)
     USB_DESC_WORD(sizeof(_usb_hid_raw_report_desc_data)),  // wDescriptorLength
 
     /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
