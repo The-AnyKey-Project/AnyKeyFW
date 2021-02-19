@@ -77,19 +77,22 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
       keypad_event_t dest[ANYKEY_NUMBER_OF_KEYS];
       keypad_get_sw_events(dest);
       uint8_t sw_id = 0;
-      for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
+      if (_anykey_current_layer)
       {
-        switch (dest[sw_id])
+        for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
         {
-          case KEYPAD_EVENT_PRESS:
-            _anykey_handle_action(_anykey_current_layer->key_actions_press[sw_id]);
-            break;
-          case KEYPAD_EVENT_RELEASE:
-            _anykey_handle_action(_anykey_current_layer->key_actions_release[sw_id]);
-            break;
-          case KEYPAD_EVENT_NONE:
-          default:
-            break;
+          switch (dest[sw_id])
+          {
+            case KEYPAD_EVENT_PRESS:
+              _anykey_handle_action(_anykey_current_layer->key_actions_press[sw_id]);
+              break;
+            case KEYPAD_EVENT_RELEASE:
+              _anykey_handle_action(_anykey_current_layer->key_actions_release[sw_id]);
+              break;
+            case KEYPAD_EVENT_NONE:
+            default:
+              break;
+          }
         }
       }
     }
