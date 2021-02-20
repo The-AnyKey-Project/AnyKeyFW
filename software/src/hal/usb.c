@@ -38,10 +38,17 @@ static USB_CALLBACK_STUB(_usb_hid_kbd_in_cb);
 static USB_CALLBACK_STUB(_usb_hid_kbdext_in_cb);
 static USB_CALLBACK_STUB(_usb_hid_raw_in_cb);
 static USB_CALLBACK_STUB(_usb_hid_raw_out_cb);
+static void _usb_hid_kbd_idle_timer_cb(void *arg);
 
 /*
  * Static variables
  */
+
+uint8_t _usb_hid_kbd_idle = 0;
+uint8_t _usb_hid_kbd_protocol = 1;
+static virtual_timer_t _usb_hid_kbd_timer;
+
+_usb_hid_kbd_report_t keyboard_report_sent = {{0}};
 
 /*
  * USB Device Descriptor.
@@ -535,6 +542,9 @@ static void _usb_init_module(void)
   usbDisconnectBus(serusbcfg.usbp);
   chThdSleepMilliseconds(1500);
 #endif
+
+  chVTObjectInit(&_usb_hid_kbd_timer);
+
   usbStart(&USB_DRIVER_HANDLE, &usbcfg);
   usbConnectBus(&USB_DRIVER_HANDLE);
 }
@@ -563,26 +573,27 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
             switch (usbp->setup[4])
             { /* LSB(wIndex) (check MSB==0?) */
               case USB_HID_KBD_INTERFACE:
-                //                usbSetupTransfer(usbp, (uint8_t *)&keyboard_report_sent,
-                //                                 sizeof(keyboard_report_sent), NULL);
+                usbSetupTransfer(usbp, (uint8_t *)&keyboard_report_sent,
+                                 sizeof(keyboard_report_sent), NULL);
                 return TRUE;
                 break;
 
               case USB_HID_KBDEXT_INTERFACE:
                 if (usbp->setup[3] == 1)
                 { /* MSB(wValue) [Report Type] == 1 [Input Report] */
+                  _usb_hid_kbdext_report_t extra_report_blank = {0, 0};
                   switch (usbp->setup[2])
                   { /* LSB(wValue) [Report ID] */
                     case USB_HID_REPORT_ID_SYSTEM:
-                      //                      extra_report_blank[0] = REPORT_ID_SYSTEM;
-                      //                      usbSetupTransfer(usbp, (uint8_t *)extra_report_blank,
-                      //                                       sizeof(extra_report_blank), NULL);
+                      extra_report_blank.report_id = USB_HID_REPORT_ID_SYSTEM;
+                      usbSetupTransfer(usbp, (uint8_t *)&extra_report_blank,
+                                       sizeof(extra_report_blank), NULL);
                       return TRUE;
                       break;
                     case USB_HID_REPORT_ID_CONSUMER:
-                      //                      extra_report_blank[0] = REPORT_ID_CONSUMER;
-                      //                      usbSetupTransfer(usbp, (uint8_t *)extra_report_blank,
-                      //                                       sizeof(extra_report_blank), NULL);
+                      extra_report_blank.report_id = USB_HID_REPORT_ID_CONSUMER;
+                      usbSetupTransfer(usbp, (uint8_t *)&extra_report_blank,
+                                       sizeof(extra_report_blank), NULL);
                       return TRUE;
                       break;
                     default:
@@ -602,16 +613,16 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
             break;
 
           case USB_HID_GET_PROTOCOL:
-            //            if ((usbp->setup[4] == USB_HID_KBD_INTERFACE) && (usbp->setup[5] == 0))
-            //            { /* wIndex */
-            //              usbSetupTransfer(usbp, &keyboard_protocol, 1, NULL);
-            //              return TRUE;
-            //            }
+            if ((usbp->setup[4] == USB_HID_KBD_INTERFACE) && (usbp->setup[5] == 0))
+            { /* wIndex */
+              usbSetupTransfer(usbp, &_usb_hid_kbd_protocol, 1, NULL);
+              return TRUE;
+            }
             break;
 
           case USB_HID_GET_IDLE:
-            //            usbSetupTransfer(usbp, &keyboard_idle, 1, NULL);
-            //            return TRUE;
+            usbSetupTransfer(usbp, &_usb_hid_kbd_idle, 1, NULL);
+            return TRUE;
             break;
         }
         break;
@@ -619,49 +630,33 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
       case USB_RTYPE_DIR_HOST2DEV:
         switch (usbp->setup[1])
         { /* bRequest */
-          case USB_HID_SET_REPORT:
-            switch (usbp->setup[4])
-            { /* LSB(wIndex) (check MSB==0 and wLength==1?) */
-              //              case USB_HID_KBD_INTERFACE:
-              //                /* keyboard_led_stats = <read byte from next OUT report>
-              //                 * keyboard_led_stats needs be word (or dword), otherwise we get an
-              //                 exception on F0
-              //                 */
-              //                usbSetupTransfer(usbp, (uint8_t *)&keyboard_led_stats, 1, NULL);
-              //                return TRUE;
-              break;
-            }
-            break;
-
           case USB_HID_SET_PROTOCOL:
-            //            if ((usbp->setup[4] == KBD_INTERFACE) && (usbp->setup[5] == 0))
-            //            {                                                 /* wIndex */
-            //              keyboard_protocol = ((usbp->setup[2]) != 0x00); /* LSB(wValue) */
-            //              if (keyboard_idle)
-            //              {
-            //                /* arm the idle timer if boot protocol & idle */
-            //                osalSysLockFromISR();
-            //                chVTSetI(&keyboard_idle_timer, 4 * MS2ST(keyboard_idle),
-            //                keyboard_idle_timer_cb,
-            //                         (void *)usbp);
-            //                osalSysUnlockFromISR();
-            //              }
-            //            }
+            if ((usbp->setup[4] == USB_HID_KBD_INTERFACE) && (usbp->setup[5] == 0))
+            {                                                     /* wIndex */
+              _usb_hid_kbd_protocol = ((usbp->setup[2]) != 0x00); /* LSB(wValue) */
+              if (_usb_hid_kbd_idle)
+              {
+                /* arm the idle timer if boot protocol & idle */
+                osalSysLockFromISR();
+                chVTSetI(&_usb_hid_kbd_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle),
+                         _usb_hid_kbd_idle_timer_cb, (void *)usbp);
+                osalSysUnlockFromISR();
+              }
+            }
             usbSetupTransfer(usbp, NULL, 0, NULL);
             return TRUE;
             break;
 
           case USB_HID_SET_IDLE:
-            //            keyboard_idle = usbp->setup[3]; /* MSB(wValue) */
-            //                                            /* arm the timer */
-            //            if (keyboard_idle)
-            //            {
-            //              osalSysLockFromISR();
-            //              chVTSetI(&keyboard_idle_timer, 4 * MS2ST(keyboard_idle),
-            //              keyboard_idle_timer_cb,
-            //                       (void *)usbp);
-            //              osalSysUnlockFromISR();
-            //            }
+            _usb_hid_kbd_idle = usbp->setup[3]; /* MSB(wValue) */
+                                                /* arm the timer */
+            if (_usb_hid_kbd_idle)
+            {
+              osalSysLockFromISR();
+              chVTSetI(&_usb_hid_kbd_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle),
+                       _usb_hid_kbd_idle_timer_cb, (void *)usbp);
+              osalSysUnlockFromISR();
+            }
             usbSetupTransfer(usbp, NULL, 0, NULL);
             return TRUE;
             break;
@@ -807,6 +802,37 @@ static void _usb_sof_cb(USBDriver *usbp)
   osalSysUnlockFromISR();
 }
 
+static void _usb_hid_kbd_idle_timer_cb(void *arg)
+{
+  USBDriver *usbp = (USBDriver *)arg;
+
+  osalSysLockFromISR();
+
+  /* check that the states of things are as they're supposed to */
+  if (usbGetDriverStateI(usbp) != USB_ACTIVE)
+  {
+    /* do not rearm the timer, should be enabled on IDLE request */
+    osalSysUnlockFromISR();
+    return;
+  }
+
+  if (_usb_hid_kbd_idle)
+  {
+    /* TODO: are we sure we want the KBD_ENDPOINT? */
+    if (!usbGetTransmitStatusI(usbp, USB_HID_KBD_EP))
+    {
+      usbStartTransmitI(usbp, USB_HID_KBD_EP, (uint8_t *)&keyboard_report_sent, USB_HID_KBD_EPSIZE);
+    }
+    /* rearm the timer */
+    chVTSetI(&_usb_hid_kbd_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle), _usb_hid_kbd_idle_timer_cb,
+             (void *)usbp);
+  }
+
+  /* do not rearm the timer if the condition above fails
+   * it should be enabled again on either IDLE or SET_PROTOCOL requests */
+  osalSysUnlockFromISR();
+}
+
 /*
  * Shell functions
  */
@@ -819,3 +845,7 @@ void usb_init(void)
   _usb_init_hal();
   _usb_init_module();
 }
+
+void usb_hid_send_key(uint8_t key) {}
+
+void usb_hid_send_keyext(uint8_t repord_id, uint16_t keyext) {}

@@ -46,6 +46,23 @@ typedef enum
   USB_NUM_OUT_EPS
 } usb_ep_out_state_id_t;
 
+typedef union
+{
+  uint8_t raw[USB_HID_KBD_EPSIZE];
+  struct
+  {
+    uint8_t mods;
+    uint8_t reserved;
+    uint8_t keys[USB_HID_KBD_EPSIZE - 2 * sizeof(uint8_t)];
+  };
+} __attribute__((packed)) _usb_hid_kbd_report_t;
+
+typedef struct
+{
+  uint8_t report_id;
+  uint16_t key;
+} __attribute__((packed)) _usb_hid_kbdext_report_t;
+
 #define USB_CALLBACK_STUB(fname)          \
   void fname(USBDriver *usbp, usbep_t ep) \
   {                                       \
