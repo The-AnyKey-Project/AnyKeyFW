@@ -3,6 +3,8 @@
  *
  *  Created on: 08.01.2021
  *      Author: matti
+ *      This code was heavily inspired by:
+ *      https://git.drak.xyz/flabbergast/chibios-projects/src/branch/master/projects/keyb
  */
 
 /*
@@ -22,6 +24,7 @@
 /*
  * Include dependencies
  */
+#include <string.h>
 
 /*
  * Forward declarations of static functions
@@ -29,26 +32,34 @@
 static void _usb_init_hal(void);
 static void _usb_init_module(void);
 static bool _usb_request_hook_hid(USBDriver *usbp);
+static void _usb_hid_kbd_report_pool_next(void);
+static bool _usb_hid_kbd_send_report(bool is_in_cb);
 static void _usb_event_cb(USBDriver *usbp, usbevent_t event);
 static const USBDescriptor *_usb_get_descriptor_cb(USBDriver *usbp, uint8_t dtype, uint8_t dindex,
                                                    uint16_t lang);
 static bool _usb_request_hook_cb(USBDriver *usbp);
 static void _usb_sof_cb(USBDriver *usbp);
+static void _usb_hid_kbd_idle_timer_cb(void *arg);
+static void _usb_hid_kbd_report_timer_cb(void *arg);
 static USB_CALLBACK_STUB(_usb_hid_kbd_in_cb);
 static USB_CALLBACK_STUB(_usb_hid_kbdext_in_cb);
 static USB_CALLBACK_STUB(_usb_hid_raw_in_cb);
 static USB_CALLBACK_STUB(_usb_hid_raw_out_cb);
-static void _usb_hid_kbd_idle_timer_cb(void *arg);
 
 /*
  * Static variables
  */
 
-uint8_t _usb_hid_kbd_idle = 0;
-uint8_t _usb_hid_kbd_protocol = 1;
-static virtual_timer_t _usb_hid_kbd_timer;
-
-_usb_hid_kbd_report_t keyboard_report_sent = {{0}};
+static uint8_t _usb_hid_kbd_idle = 0;
+static uint8_t _usb_hid_kbd_protocol = 1;
+static virtual_timer_t _usb_hid_kbd_idle_timer;
+static virtual_timer_t _usb_hid_kbd_report_timer;
+static _usb_hid_kbd_report_t _usb_hid_kbd_report_pool[USB_HID_KBD_REPORT_POOLSIZE];
+static _usb_hid_kbd_report_t *_usb_hid_kbd_report_prepare = (_usb_hid_kbd_report_t *)NULL;
+static _usb_hid_kbd_report_t *_usb_hid_kbd_report_inflight = (_usb_hid_kbd_report_t *)NULL;
+static uint8_t _usb_hid_report_payload_idx = 0;
+static uint8_t _usb_hid_report_idx = 0;
+static uint8_t _usb_hid_report_retry_counter = 0;
 
 /*
  * USB Device Descriptor.
@@ -84,38 +95,38 @@ static const USBDescriptor _usb_device_descriptor = {sizeof usb_device_descripto
 
 /* Keyboard Protocol 1, HID 1.11 spec, Appendix B, page 59-60 */
 static const uint8_t _usb_hid_kbd_report_desc_data[] = {
-    0x05, 0x01,                      // Usage Page (Generic Desktop),
-    0x09, 0x06,                      // Usage (Keyboard),
-    0xA1, 0x01,                      // Collection (Application),
-    0x75, 0x01,                      //   Report Size (1),
-    0x95, 0x08,                      //   Report Count (8),
-    0x05, 0x07,                      //   Usage Page (Key Codes),
-    0x19, 0xE0,                      //   Usage Minimum (224),
-    0x29, 0xE7,                      //   Usage Maximum (231),
-    0x15, 0x00,                      //   Logical Minimum (0),
-    0x25, 0x01,                      //   Logical Maximum (1),
-    0x81, 0x02,                      //   Input (Data, Variable, Absolute), ;Modifier byte
-    0x95, 0x01,                      //   Report Count (1),
-    0x75, 0x08,                      //   Report Size (8),
-    0x81, 0x03,                      //   Input (Constant),                 ;Reserved byte
-    0x95, 0x05,                      //   Report Count (5),
-    0x75, 0x01,                      //   Report Size (1),
-    0x05, 0x08,                      //   Usage Page (LEDs),
-    0x19, 0x01,                      //   Usage Minimum (1),
-    0x29, 0x05,                      //   Usage Maximum (5),
-    0x91, 0x02,                      //   Output (Data, Variable, Absolute), ;LED report
-    0x95, 0x01,                      //   Report Count (1),
-    0x75, 0x03,                      //   Report Size (3),
-    0x91, 0x03,                      //   Output (Constant),                 ;LED report padding
-    0x95, (USB_HID_KBD_EPSIZE - 2),  //   Report Count (),
-    0x75, 0x08,                      //   Report Size (8),
-    0x15, 0x00,                      //   Logical Minimum (0),
-    0x25, 0xFF,                      //   Logical Maximum(255),
-    0x05, 0x07,                      //   Usage Page (Key Codes),
-    0x19, 0x00,                      //   Usage Minimum (0),
-    0x29, 0xFF,                      //   Usage Maximum (255),
-    0x81, 0x00,                      //   Input (Data, Array),
-    0xc0                             // End Collection
+    0x05, 0x01,                     // Usage Page (Generic Desktop),
+    0x09, 0x06,                     // Usage (Keyboard),
+    0xA1, 0x01,                     // Collection (Application),
+    0x75, 0x01,                     //   Report Size (1),
+    0x95, 0x08,                     //   Report Count (8),
+    0x05, 0x07,                     //   Usage Page (Key Codes),
+    0x19, 0xE0,                     //   Usage Minimum (224),
+    0x29, 0xE7,                     //   Usage Maximum (231),
+    0x15, 0x00,                     //   Logical Minimum (0),
+    0x25, 0x01,                     //   Logical Maximum (1),
+    0x81, 0x02,                     //   Input (Data, Variable, Absolute), ;Modifier byte
+    0x95, 0x01,                     //   Report Count (1),
+    0x75, 0x08,                     //   Report Size (8),
+    0x81, 0x03,                     //   Input (Constant),                 ;Reserved byte
+    0x95, 0x05,                     //   Report Count (5),
+    0x75, 0x01,                     //   Report Size (1),
+    0x05, 0x08,                     //   Usage Page (LEDs),
+    0x19, 0x01,                     //   Usage Minimum (1),
+    0x29, 0x05,                     //   Usage Maximum (5),
+    0x91, 0x02,                     //   Output (Data, Variable, Absolute), ;LED report
+    0x95, 0x01,                     //   Report Count (1),
+    0x75, 0x03,                     //   Report Size (3),
+    0x91, 0x03,                     //   Output (Constant),                 ;LED report padding
+    0x95, USB_HID_KBD_REPORT_KEYS,  //   Report Count (),
+    0x75, 0x08,                     //   Report Size (8),
+    0x15, 0x00,                     //   Logical Minimum (0),
+    0x25, 0xFF,                     //   Logical Maximum(255),
+    0x05, 0x07,                     //   Usage Page (Key Codes),
+    0x19, 0x00,                     //   Usage Minimum (0),
+    0x29, 0xFF,                     //   Usage Maximum (255),
+    0x81, 0x00,                     //   Input (Data, Array),
+    0xc0                            // End Collection
 };
 
 /* audio controls & system controls
@@ -543,7 +554,10 @@ static void _usb_init_module(void)
   chThdSleepMilliseconds(1500);
 #endif
 
-  chVTObjectInit(&_usb_hid_kbd_timer);
+  chVTObjectInit(&_usb_hid_kbd_idle_timer);
+  chVTObjectInit(&_usb_hid_kbd_report_timer);
+  memset(_usb_hid_kbd_report_pool, 0, sizeof(_usb_hid_kbd_report_pool));
+  _usb_hid_kbd_report_prepare = &_usb_hid_kbd_report_pool[_usb_hid_report_idx];
 
   usbStart(&USB_DRIVER_HANDLE, &usbcfg);
   usbConnectBus(&USB_DRIVER_HANDLE);
@@ -573,8 +587,8 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
             switch (usbp->setup[4])
             { /* LSB(wIndex) (check MSB==0?) */
               case USB_HID_KBD_INTERFACE:
-                usbSetupTransfer(usbp, (uint8_t *)&keyboard_report_sent,
-                                 sizeof(keyboard_report_sent), NULL);
+                usbSetupTransfer(usbp, (uint8_t *)_usb_hid_kbd_report_inflight,
+                                 sizeof(_usb_hid_kbd_report_t), NULL);
                 return TRUE;
                 break;
 
@@ -637,10 +651,10 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
               if (_usb_hid_kbd_idle)
               {
                 /* arm the idle timer if boot protocol & idle */
-                osalSysLockFromISR();
-                chVTSetI(&_usb_hid_kbd_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle),
+                chSysLockFromISR();
+                chVTSetI(&_usb_hid_kbd_idle_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle),
                          _usb_hid_kbd_idle_timer_cb, (void *)usbp);
-                osalSysUnlockFromISR();
+                chSysUnlockFromISR();
               }
             }
             usbSetupTransfer(usbp, NULL, 0, NULL);
@@ -652,10 +666,10 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
                                                 /* arm the timer */
             if (_usb_hid_kbd_idle)
             {
-              osalSysLockFromISR();
-              chVTSetI(&_usb_hid_kbd_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle),
+              chSysLockFromISR();
+              chVTSetI(&_usb_hid_kbd_idle_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle),
                        _usb_hid_kbd_idle_timer_cb, (void *)usbp);
-              osalSysUnlockFromISR();
+              chSysUnlockFromISR();
             }
             usbSetupTransfer(usbp, NULL, 0, NULL);
             return TRUE;
@@ -676,6 +690,52 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
   }
 
   return FALSE;
+}
+
+static void _usb_hid_kbd_report_pool_next(void)
+{
+  chSysLock();
+  _usb_hid_kbd_report_inflight = _usb_hid_kbd_report_prepare;
+  _usb_hid_kbd_report_prepare =
+      &_usb_hid_kbd_report_pool[(_usb_hid_report_idx + 1) % USB_HID_KBD_REPORT_POOLSIZE];
+  memset(_usb_hid_kbd_report_prepare, 0, sizeof(_usb_hid_kbd_report_t));
+  _usb_hid_report_payload_idx = 0;
+  chSysUnlock();
+}
+
+static bool _usb_hid_kbd_send_report(bool is_in_cb)
+{
+  chSysLockFromISR();
+  if (usbGetDriverStateI(&USB_DRIVER_HANDLE) != USB_ACTIVE)
+  {
+    chSysUnlockFromISR();
+    return FALSE;
+  }
+  chSysUnlockFromISR();
+
+  /* need to wait until the previous packet has made it through */
+  /* busy wait, should be short and not very common */
+  chSysLock();
+  if (usbGetTransmitStatusI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP))
+  {
+    /* Need to either suspend, or loop and call unlock/lock during
+     * every iteration - otherwise the system will remain locked,
+     * no interrupts served, so USB not going through as well.
+     * Note: for suspend, need USB_USE_WAIT == TRUE in halconf.h */
+    if (is_in_cb == FALSE)
+    {
+      chThdSuspendS(&(&USB_DRIVER_HANDLE)->epc[USB_HID_KBD_EP]->in_state->thread);
+    }
+    else
+    {
+      chSysUnlockFromISR();
+      return FALSE;
+    }
+  }
+  usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP, (uint8_t *)_usb_hid_kbd_report_inflight,
+                    USB_HID_KBD_EPSIZE);
+  chSysUnlockFromISR();
+  return TRUE;
 }
 
 /*
@@ -797,22 +857,22 @@ static void _usb_sof_cb(USBDriver *usbp)
 {
   (void)usbp;
 
-  osalSysLockFromISR();
+  chSysLockFromISR();
   sduSOFHookI(&USB_CDC_DRIVER_HANDLE);
-  osalSysUnlockFromISR();
+  chSysUnlockFromISR();
 }
 
 static void _usb_hid_kbd_idle_timer_cb(void *arg)
 {
   USBDriver *usbp = (USBDriver *)arg;
 
-  osalSysLockFromISR();
+  chSysLockFromISR();
 
   /* check that the states of things are as they're supposed to */
   if (usbGetDriverStateI(usbp) != USB_ACTIVE)
   {
     /* do not rearm the timer, should be enabled on IDLE request */
-    osalSysUnlockFromISR();
+    chSysUnlockFromISR();
     return;
   }
 
@@ -821,16 +881,39 @@ static void _usb_hid_kbd_idle_timer_cb(void *arg)
     /* TODO: are we sure we want the KBD_ENDPOINT? */
     if (!usbGetTransmitStatusI(usbp, USB_HID_KBD_EP))
     {
-      usbStartTransmitI(usbp, USB_HID_KBD_EP, (uint8_t *)&keyboard_report_sent, USB_HID_KBD_EPSIZE);
+      usbStartTransmitI(usbp, USB_HID_KBD_EP, (uint8_t *)_usb_hid_kbd_report_inflight,
+                        sizeof(_usb_hid_kbd_report_t));
     }
     /* rearm the timer */
-    chVTSetI(&_usb_hid_kbd_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle), _usb_hid_kbd_idle_timer_cb,
+    chVTSetI(&_usb_hid_kbd_idle_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle), _usb_hid_kbd_idle_timer_cb,
              (void *)usbp);
   }
 
   /* do not rearm the timer if the condition above fails
    * it should be enabled again on either IDLE or SET_PROTOCOL requests */
-  osalSysUnlockFromISR();
+  chSysUnlockFromISR();
+}
+
+static void _usb_hid_kbd_report_timer_cb(void *arg)
+{
+  bool retry = (bool)arg;
+  if (retry == FALSE)
+  {
+    _usb_hid_kbd_report_pool_next();
+  }
+  if (_usb_hid_kbd_send_report(TRUE) == FALSE)
+  {
+    if (_usb_hid_report_retry_counter < USB_HID_KBD_REPORT_RETRY_MAX)
+    {
+      _usb_hid_report_retry_counter++;
+      chVTSetI(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_RETRY_MS),
+               _usb_hid_kbd_report_timer_cb, (void *)TRUE);
+    }
+  }
+  else
+  {
+    _usb_hid_report_retry_counter = 0;
+  }
 }
 
 /*
@@ -846,6 +929,41 @@ void usb_init(void)
   _usb_init_module();
 }
 
-void usb_hid_send_key(uint8_t key) {}
+void usb_hid_kbd_flush(void)
+{
+  _usb_hid_kbd_report_pool_next();
+  _usb_hid_kbd_send_report(FALSE);
+}
 
-void usb_hid_send_keyext(uint8_t repord_id, uint16_t keyext) {}
+void usb_hid_kbd_send_key(uint8_t key)
+{
+  chVTReset(&_usb_hid_kbd_report_timer);
+  _usb_hid_kbd_report_prepare->keys[_usb_hid_report_payload_idx] = key;
+  _usb_hid_report_payload_idx++;
+  if (_usb_hid_report_payload_idx == USB_HID_KBD_REPORT_KEYS)
+  {
+    usb_hid_kbd_flush();
+  }
+  else
+  {
+    chVTSet(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_TIMEOUT_MS),
+            _usb_hid_kbd_report_timer_cb, (void *)FALSE);
+  }
+}
+
+void usb_hid_kbdext_send_key(uint8_t report_id, uint16_t keyext)
+{
+  _usb_hid_kbdext_report_t report;
+  report.report_id = report_id;
+  report.key = keyext;
+  chSysLock();
+  if (usbGetDriverStateI(&USB_DRIVER_HANDLE) != USB_ACTIVE)
+  {
+    osalSysUnlock();
+    return;
+  }
+
+  usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBDEXT_EP, (uint8_t *)&report,
+                    sizeof(_usb_hid_kbdext_report_t));
+  chSysUnlock();
+}

@@ -12,6 +12,9 @@
 #include "types/hal/usb_types.h"
 
 extern void usb_init(void);
+extern void usb_hid_kbd_flush(void);
+extern void usb_hid_kbd_send_key(uint8_t key);
+extern void usb_hid_kbdext_send_key(uint8_t report_id, uint16_t keyext);
 
 extern SerialUSBDriver USB_CDC_DRIVER_HANDLE;
 

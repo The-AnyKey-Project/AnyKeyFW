@@ -53,7 +53,7 @@ typedef union
   {
     uint8_t mods;
     uint8_t reserved;
-    uint8_t keys[USB_HID_KBD_EPSIZE - 2 * sizeof(uint8_t)];
+    uint8_t keys[USB_HID_KBD_REPORT_KEYS];
   };
 } __attribute__((packed)) _usb_hid_kbd_report_t;
 
