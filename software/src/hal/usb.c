@@ -587,7 +587,7 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
             switch (usbp->setup[4])
             { /* LSB(wIndex) (check MSB==0?) */
               case USB_HID_KBD_INTERFACE:
-                usbSetupTransfer(usbp, _usb_hid_kbd_report_inflight->raw,
+                usbSetupTransfer(usbp, (uint8_t *)_usb_hid_kbd_report_inflight,
                                  sizeof(usb_hid_kbd_report_t), NULL);
                 return TRUE;
                 break;
@@ -595,19 +595,17 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
               case USB_HID_KBDEXT_INTERFACE:
                 if (usbp->setup[3] == 1)
                 { /* MSB(wValue) [Report Type] == 1 [Input Report] */
-                  usb_hid_kbdext_report_t extra_report_blank = {.raw = {0, 0}};
+                  usb_hid_kbdext_report_t blank_report = {.key = 0};
                   switch (usbp->setup[2])
                   { /* LSB(wValue) [Report ID] */
                     case USB_HID_REPORT_ID_SYSTEM:
-                      extra_report_blank.report_id = USB_HID_REPORT_ID_SYSTEM;
-                      usbSetupTransfer(usbp, (uint8_t *)&extra_report_blank,
-                                       sizeof(extra_report_blank), NULL);
+                      blank_report.report_id = USB_HID_REPORT_ID_SYSTEM;
+                      usbSetupTransfer(usbp, (uint8_t *)&blank_report, sizeof(blank_report), NULL);
                       return TRUE;
                       break;
                     case USB_HID_REPORT_ID_CONSUMER:
-                      extra_report_blank.report_id = USB_HID_REPORT_ID_CONSUMER;
-                      usbSetupTransfer(usbp, (uint8_t *)&extra_report_blank,
-                                       sizeof(extra_report_blank), NULL);
+                      blank_report.report_id = USB_HID_REPORT_ID_CONSUMER;
+                      usbSetupTransfer(usbp, (uint8_t *)&blank_report, sizeof(blank_report), NULL);
                       return TRUE;
                       break;
                     default:
@@ -715,7 +713,7 @@ static bool _usb_hid_kbd_send_report(bool is_in_cb)
 
   /* need to wait until the previous packet has made it through */
   /* busy wait, should be short and not very common */
-  chSysLock();
+  chSysLockFromISR();
   if (usbGetTransmitStatusI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP))
   {
     /* Need to either suspend, or loop and call unlock/lock during
@@ -732,7 +730,7 @@ static bool _usb_hid_kbd_send_report(bool is_in_cb)
       return FALSE;
     }
   }
-  usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP, _usb_hid_kbd_report_inflight->raw,
+  usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP, (uint8_t *)_usb_hid_kbd_report_inflight,
                     USB_HID_KBD_EPSIZE);
   chSysUnlockFromISR();
   return TRUE;
@@ -881,7 +879,7 @@ static void _usb_hid_kbd_idle_timer_cb(void *arg)
     /* TODO: are we sure we want the KBD_ENDPOINT? */
     if (!usbGetTransmitStatusI(usbp, USB_HID_KBD_EP))
     {
-      usbStartTransmitI(usbp, USB_HID_KBD_EP, _usb_hid_kbd_report_inflight->raw,
+      usbStartTransmitI(usbp, USB_HID_KBD_EP, (uint8_t *)_usb_hid_kbd_report_inflight,
                         sizeof(usb_hid_kbd_report_t));
     }
     /* rearm the timer */
@@ -957,11 +955,25 @@ void usb_hid_kbdext_send_key(usb_hid_report_id_t report_id, uint16_t keyext)
   chSysLock();
   if (usbGetDriverStateI(&USB_DRIVER_HANDLE) != USB_ACTIVE)
   {
-    osalSysUnlock();
+    chSysUnlock();
     return;
   }
 
-  usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBDEXT_EP, report.raw,
+  if (usbGetTransmitStatusI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP))
+  {
+    /* Need to either suspend, or loop and call unlock/lock during
+     * every iteration - otherwise the system will remain locked,
+     * no interrupts served, so USB not going through as well.
+     * Note: for suspend, need USB_USE_WAIT == TRUE in halconf.h */
+    chSysUnlock();
+    chThdSuspendS(&(&USB_DRIVER_HANDLE)->epc[USB_HID_KBDEXT_EP]->in_state->thread);
+    chSysLock();
+  }
+
+  usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBDEXT_EP, (uint8_t *)&report,
                     sizeof(usb_hid_kbdext_report_t));
+
+  chSysUnlockFromISR();
+
   chSysUnlock();
 }
