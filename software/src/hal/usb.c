@@ -40,7 +40,7 @@ static const USBDescriptor *_usb_get_descriptor_cb(USBDriver *usbp, uint8_t dtyp
 static bool _usb_request_hook_cb(USBDriver *usbp);
 static void _usb_sof_cb(USBDriver *usbp);
 static void _usb_hid_kbd_idle_timer_cb(void *arg);
-static void _usb_hid_kbd_report_timer_cb(void *arg);
+static void usb_hid_kbd_report_timer_cb(void *arg);
 static USB_CALLBACK_STUB(_usb_hid_kbd_in_cb);
 static USB_CALLBACK_STUB(_usb_hid_kbdext_in_cb);
 static USB_CALLBACK_STUB(_usb_hid_raw_in_cb);
@@ -53,10 +53,10 @@ static USB_CALLBACK_STUB(_usb_hid_raw_out_cb);
 static uint8_t _usb_hid_kbd_idle = 0;
 static uint8_t _usb_hid_kbd_protocol = 1;
 static virtual_timer_t _usb_hid_kbd_idle_timer;
-static virtual_timer_t _usb_hid_kbd_report_timer;
-static _usb_hid_kbd_report_t _usb_hid_kbd_report_pool[USB_HID_KBD_REPORT_POOLSIZE];
-static _usb_hid_kbd_report_t *_usb_hid_kbd_report_prepare = (_usb_hid_kbd_report_t *)NULL;
-static _usb_hid_kbd_report_t *_usb_hid_kbd_report_inflight = (_usb_hid_kbd_report_t *)NULL;
+static virtual_timer_t usb_hid_kbd_report_timer;
+static usb_hid_kbd_report_t _usb_hid_kbd_report_pool[USB_HID_KBD_REPORT_POOLSIZE];
+static usb_hid_kbd_report_t *_usb_hid_kbd_report_prepare = (usb_hid_kbd_report_t *)NULL;
+static usb_hid_kbd_report_t *_usb_hid_kbd_report_inflight = (usb_hid_kbd_report_t *)NULL;
 static uint8_t _usb_hid_report_payload_idx = 0;
 static uint8_t _usb_hid_report_idx = 0;
 static uint8_t _usb_hid_report_retry_counter = 0;
@@ -555,7 +555,7 @@ static void _usb_init_module(void)
 #endif
 
   chVTObjectInit(&_usb_hid_kbd_idle_timer);
-  chVTObjectInit(&_usb_hid_kbd_report_timer);
+  chVTObjectInit(&usb_hid_kbd_report_timer);
   memset(_usb_hid_kbd_report_pool, 0, sizeof(_usb_hid_kbd_report_pool));
   _usb_hid_kbd_report_prepare = &_usb_hid_kbd_report_pool[_usb_hid_report_idx];
 
@@ -587,15 +587,15 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
             switch (usbp->setup[4])
             { /* LSB(wIndex) (check MSB==0?) */
               case USB_HID_KBD_INTERFACE:
-                usbSetupTransfer(usbp, (uint8_t *)_usb_hid_kbd_report_inflight,
-                                 sizeof(_usb_hid_kbd_report_t), NULL);
+                usbSetupTransfer(usbp, _usb_hid_kbd_report_inflight->raw,
+                                 sizeof(usb_hid_kbd_report_t), NULL);
                 return TRUE;
                 break;
 
               case USB_HID_KBDEXT_INTERFACE:
                 if (usbp->setup[3] == 1)
                 { /* MSB(wValue) [Report Type] == 1 [Input Report] */
-                  _usb_hid_kbdext_report_t extra_report_blank = {0, 0};
+                  usb_hid_kbdext_report_t extra_report_blank = {.raw = {0, 0}};
                   switch (usbp->setup[2])
                   { /* LSB(wValue) [Report ID] */
                     case USB_HID_REPORT_ID_SYSTEM:
@@ -696,9 +696,9 @@ static void _usb_hid_kbd_report_pool_next(void)
 {
   chSysLock();
   _usb_hid_kbd_report_inflight = _usb_hid_kbd_report_prepare;
-  _usb_hid_kbd_report_prepare =
-      &_usb_hid_kbd_report_pool[(_usb_hid_report_idx + 1) % USB_HID_KBD_REPORT_POOLSIZE];
-  memset(_usb_hid_kbd_report_prepare, 0, sizeof(_usb_hid_kbd_report_t));
+  _usb_hid_report_idx = (_usb_hid_report_idx + 1) % USB_HID_KBD_REPORT_POOLSIZE;
+  _usb_hid_kbd_report_prepare = &_usb_hid_kbd_report_pool[_usb_hid_report_idx];
+  memset(_usb_hid_kbd_report_prepare, 0, sizeof(usb_hid_kbd_report_t));
   _usb_hid_report_payload_idx = 0;
   chSysUnlock();
 }
@@ -732,7 +732,7 @@ static bool _usb_hid_kbd_send_report(bool is_in_cb)
       return FALSE;
     }
   }
-  usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP, (uint8_t *)_usb_hid_kbd_report_inflight,
+  usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP, _usb_hid_kbd_report_inflight->raw,
                     USB_HID_KBD_EPSIZE);
   chSysUnlockFromISR();
   return TRUE;
@@ -881,8 +881,8 @@ static void _usb_hid_kbd_idle_timer_cb(void *arg)
     /* TODO: are we sure we want the KBD_ENDPOINT? */
     if (!usbGetTransmitStatusI(usbp, USB_HID_KBD_EP))
     {
-      usbStartTransmitI(usbp, USB_HID_KBD_EP, (uint8_t *)_usb_hid_kbd_report_inflight,
-                        sizeof(_usb_hid_kbd_report_t));
+      usbStartTransmitI(usbp, USB_HID_KBD_EP, _usb_hid_kbd_report_inflight->raw,
+                        sizeof(usb_hid_kbd_report_t));
     }
     /* rearm the timer */
     chVTSetI(&_usb_hid_kbd_idle_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle), _usb_hid_kbd_idle_timer_cb,
@@ -894,7 +894,7 @@ static void _usb_hid_kbd_idle_timer_cb(void *arg)
   chSysUnlockFromISR();
 }
 
-static void _usb_hid_kbd_report_timer_cb(void *arg)
+static void usb_hid_kbd_report_timer_cb(void *arg)
 {
   bool retry = (bool)arg;
   if (retry == FALSE)
@@ -906,14 +906,12 @@ static void _usb_hid_kbd_report_timer_cb(void *arg)
     if (_usb_hid_report_retry_counter < USB_HID_KBD_REPORT_RETRY_MAX)
     {
       _usb_hid_report_retry_counter++;
-      chVTSetI(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_RETRY_MS),
-               _usb_hid_kbd_report_timer_cb, (void *)TRUE);
+      chVTSetI(&usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_RETRY_MS),
+               usb_hid_kbd_report_timer_cb, (void *)TRUE);
+      return;
     }
   }
-  else
-  {
-    _usb_hid_report_retry_counter = 0;
-  }
+  _usb_hid_report_retry_counter = 0;
 }
 
 /*
@@ -937,7 +935,7 @@ void usb_hid_kbd_flush(void)
 
 void usb_hid_kbd_send_key(uint8_t key)
 {
-  chVTReset(&_usb_hid_kbd_report_timer);
+  chVTReset(&usb_hid_kbd_report_timer);
   _usb_hid_kbd_report_prepare->keys[_usb_hid_report_payload_idx] = key;
   _usb_hid_report_payload_idx++;
   if (_usb_hid_report_payload_idx == USB_HID_KBD_REPORT_KEYS)
@@ -946,14 +944,14 @@ void usb_hid_kbd_send_key(uint8_t key)
   }
   else
   {
-    chVTSet(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_TIMEOUT_MS),
-            _usb_hid_kbd_report_timer_cb, (void *)FALSE);
+    chVTSet(&usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_TIMEOUT_MS),
+            usb_hid_kbd_report_timer_cb, (void *)FALSE);
   }
 }
 
-void usb_hid_kbdext_send_key(uint8_t report_id, uint16_t keyext)
+void usb_hid_kbdext_send_key(usb_hid_report_id_t report_id, uint16_t keyext)
 {
-  _usb_hid_kbdext_report_t report;
+  usb_hid_kbdext_report_t report;
   report.report_id = report_id;
   report.key = keyext;
   chSysLock();
@@ -963,7 +961,7 @@ void usb_hid_kbdext_send_key(uint8_t report_id, uint16_t keyext)
     return;
   }
 
-  usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBDEXT_EP, (uint8_t *)&report,
-                    sizeof(_usb_hid_kbdext_report_t));
+  usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBDEXT_EP, report.raw,
+                    sizeof(usb_hid_kbdext_report_t));
   chSysUnlock();
 }
