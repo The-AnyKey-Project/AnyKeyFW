@@ -44,7 +44,7 @@ static const ShellCommand _cmd_shell_cmds[] = {
   ANYKEY_CMD_LIST,
   GLCD_CMD_LIST,
   KEYPAD_CMD_LIST,
-//  USB_CMD_LIST,
+  USB_CMD_LIST,
   {NULL, NULL}
 };
 

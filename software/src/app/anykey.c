@@ -105,10 +105,16 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 
   chRegSetThreadName("anykey_cmd_th");
 
-  //  while(true)
-  //  {
-  // TODO
-  //  }
+  while (true)
+  {
+    uint8_t input_buffer[USB_HID_RAW_EPSIZE];
+    size_t size = usb_hid_raw_receive(input_buffer, USB_HID_RAW_EPSIZE);
+    if (size)
+    {
+      // TODO do something
+      // usb_hid_raw_send(input_buffer, size);
+    }
+  }
 }
 
 /*

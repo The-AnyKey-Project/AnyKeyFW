@@ -10,15 +10,17 @@
 
 /*
  * Global definition of shell commands
- * for module usb
+ * for module keypad
  */
+extern void usb_loop_hid_raw_input(BaseSequentialStream *chp, int argc, char *argv[]);
 
 /*
  * Shell command list
- * for module usb
+ * for module kepad
  */
 // clang-format off
 #define USB_CMD_LIST \
+    {"usb-loop-hid-raw", usb_loop_hid_raw_input}
 // clang-format on
 
 #endif /* INC_CMD_USB_HID_H_ */

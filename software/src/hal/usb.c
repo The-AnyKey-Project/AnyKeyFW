@@ -31,20 +31,25 @@
  */
 static void _usb_init_hal(void);
 static void _usb_init_module(void);
-static bool _usb_request_hook_hid(USBDriver *usbp);
+static bool _usb_hid_request_hook(USBDriver *usbp);
 static void _usb_hid_kbd_report_pool_next(void);
 static bool _usb_hid_kbd_send_report(bool is_in_cb);
+static bool _usb_hid_raw_start_receive(void);
+static void _usb_hid_raw_sof_hook(void);
+static void _usb_hid_raw_configured_hook(void);
 static void _usb_event_cb(USBDriver *usbp, usbevent_t event);
 static const USBDescriptor *_usb_get_descriptor_cb(USBDriver *usbp, uint8_t dtype, uint8_t dindex,
                                                    uint16_t lang);
 static bool _usb_request_hook_cb(USBDriver *usbp);
 static void _usb_sof_cb(USBDriver *usbp);
 static void _usb_hid_kbd_idle_timer_cb(void *arg);
-static void usb_hid_kbd_report_timer_cb(void *arg);
+static void _usb_hid_kbd_report_timer_cb(void *arg);
+static void _usb_hid_raw_out_cb(USBDriver *usbp, usbep_t ep);
+static void _usb_hid_raw_in_cb(USBDriver *usbp, usbep_t ep);
+static void _usb_hid_raw_ibnotify_cb(io_buffers_queue_t *bqp);
+static void _usb_hid_raw_obnotify_cb(io_buffers_queue_t *bqp);
 static USB_CALLBACK_STUB(_usb_hid_kbd_in_cb);
 static USB_CALLBACK_STUB(_usb_hid_kbdext_in_cb);
-static USB_CALLBACK_STUB(_usb_hid_raw_in_cb);
-static USB_CALLBACK_STUB(_usb_hid_raw_out_cb);
 
 /*
  * Static variables
@@ -53,13 +58,17 @@ static USB_CALLBACK_STUB(_usb_hid_raw_out_cb);
 static uint8_t _usb_hid_kbd_idle = 0;
 static uint8_t _usb_hid_kbd_protocol = 1;
 static virtual_timer_t _usb_hid_kbd_idle_timer;
-static virtual_timer_t usb_hid_kbd_report_timer;
+static virtual_timer_t _usb_hid_kbd_report_timer;
 static usb_hid_kbd_report_t _usb_hid_kbd_report_pool[USB_HID_KBD_REPORT_POOLSIZE];
 static usb_hid_kbd_report_t *_usb_hid_kbd_report_prepare = (usb_hid_kbd_report_t *)NULL;
 static usb_hid_kbd_report_t *_usb_hid_kbd_report_inflight = (usb_hid_kbd_report_t *)NULL;
 static uint8_t _usb_hid_report_payload_idx = 0;
 static uint8_t _usb_hid_report_idx = 0;
 static uint8_t _usb_hid_report_retry_counter = 0;
+static uint8_t _usb_hid_raw_input_buffer[USB_HID_RAW_EPSIZE * USB_HID_RAW_INPUT_BUFFER_ENTRIES];
+static uint8_t _usb_hid_raw_output_buffer[USB_HID_RAW_EPSIZE * USB_HID_RAW_OUTPUT_BUFFER_ENTRIES];
+static input_buffers_queue_t _usb_hid_raw_input_queue;
+static input_buffers_queue_t _usb_hid_raw_output_queue;
 
 /*
  * USB Device Descriptor.
@@ -161,19 +170,25 @@ static const uint8_t _usb_hid_kbdext_report_desc_data[] = {
 };
 
 static const uint8_t _usb_hid_raw_report_desc_data[] = {
-    0x06, 0x31,
-    0xFF,        // Usage Page 0xFF31 (vendor defined)
-    0x09, 0x74,  // Usage 0x74
-    0xA1, 0x53,  // Collection 0x53
-    0x75, 0x08,  // report size = 8 bits
-    0x15, 0x00,  // logical minimum = 0
-    0x26, 0xFF,
-    0x00,                      // logical maximum = 255
-    0x95, USB_HID_RAW_EPSIZE,  // report count
-    0x09, 0x75,                // usage
-    0x81, 0x02,                // Input (array)
-    0xC0                       // end collection
+    0x06, 0x60,
+    0xFF,                       // Usage Page 0xFF60 (vendor defined)
+    0x09, 0x61,                 // Usage 0x61
+    0xA1, 0x01,                 // Collection 0x01
+    0x09, 0x62,                 //   Usage 0x62
+    0x15, 0x00,                 //   logical minimum = 0
+    0x25, 0xFF,                 //   logical maximum = 255
+    0x95, USB_HID_RAW_EPSIZE,   //   report count
+    0x75, 0x08,                 //   REPORT_SIZE (8)
+    0x81, USB_HID_RAW_IOF_IN,   //   I/O Feature descriptor
+    0x09, 0x63,                 //   Usage 0x63
+    0x15, 0x00,                 //   logical minimum = 0
+    0x25, 0xFF,                 //   logical maximum = 255
+    0x95, USB_HID_RAW_EPSIZE,   //   report count
+    0x75, 0x08,                 //   REPORT_SIZE (8)
+    0x91, USB_HID_RAW_IOF_OUT,  //   I/O Feature descriptor
+    0xC0                        // end collection
 };
+
 /*
  * wrapper
  */
@@ -555,15 +570,20 @@ static void _usb_init_module(void)
 #endif
 
   chVTObjectInit(&_usb_hid_kbd_idle_timer);
-  chVTObjectInit(&usb_hid_kbd_report_timer);
+  chVTObjectInit(&_usb_hid_kbd_report_timer);
   memset(_usb_hid_kbd_report_pool, 0, sizeof(_usb_hid_kbd_report_pool));
   _usb_hid_kbd_report_prepare = &_usb_hid_kbd_report_pool[_usb_hid_report_idx];
+
+  ibqObjectInit(&_usb_hid_raw_input_queue, true, _usb_hid_raw_input_buffer, USB_HID_RAW_EPSIZE,
+                USB_HID_RAW_INPUT_BUFFER_ENTRIES, _usb_hid_raw_ibnotify_cb, NULL);
+  obqObjectInit(&_usb_hid_raw_output_queue, true, _usb_hid_raw_output_buffer, USB_HID_RAW_EPSIZE,
+                USB_HID_RAW_OUTPUT_BUFFER_ENTRIES, _usb_hid_raw_obnotify_cb, NULL);
 
   usbStart(&USB_DRIVER_HANDLE, &usbcfg);
   usbConnectBus(&USB_DRIVER_HANDLE);
 }
 
-static bool _usb_request_hook_hid(USBDriver *usbp)
+static bool _usb_hid_request_hook(USBDriver *usbp)
 {
   const USBDescriptor *dp;
 
@@ -617,6 +637,15 @@ static bool _usb_request_hook_hid(USBDriver *usbp)
                   return FALSE;
                 }
                 break;
+              case USB_HID_RAW_INTERFACE:
+              {
+                uint8_t buf[USB_HID_RAW_EPSIZE] = {0};
+                uint8_t i = 0;
+                for (i = 0; i < USB_HID_RAW_EPSIZE; i++) buf[i] = i;
+                usbSetupTransfer(usbp, buf, sizeof(uint8_t) * USB_HID_RAW_EPSIZE, NULL);
+                return TRUE;
+                break;
+              }
               default:
                 usbSetupTransfer(usbp, NULL, 0, NULL);
                 return TRUE;
@@ -736,6 +765,75 @@ static bool _usb_hid_kbd_send_report(bool is_in_cb)
   return TRUE;
 }
 
+static bool _usb_hid_raw_start_receive(void)
+{
+  uint8_t *buf;
+
+  /* If the USB driver is not in the appropriate state then transactions
+     must not be started.*/
+  if ((usbGetDriverStateI(&USB_DRIVER_HANDLE) != USB_ACTIVE))
+  {
+    return true;
+  }
+
+  /* Checking if there is already a transaction ongoing on the endpoint.*/
+  if (usbGetReceiveStatusI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP))
+  {
+    return true;
+  }
+
+  /* Checking if there is a buffer ready for incoming data.*/
+  buf = ibqGetEmptyBufferI(&_usb_hid_raw_input_queue);
+  if (buf == NULL)
+  {
+    return true;
+  }
+
+  /* Buffer found, starting a new transaction.*/
+  usbStartReceiveI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP, buf, USB_HID_RAW_EPSIZE);
+
+  return false;
+}
+
+static void _usb_hid_raw_sof_hook(void)
+{
+  /* If the USB driver is not in the appropriate state then transactions
+     must not be started.*/
+  if ((usbGetDriverStateI(&USB_DRIVER_HANDLE) != USB_ACTIVE))
+  {
+    return;
+  }
+
+  /* If there is already a transaction ongoing then another one cannot be
+     started.*/
+  if (usbGetTransmitStatusI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP))
+  {
+    return;
+  }
+
+  /* Checking if there only a buffer partially filled, if so then it is
+     enforced in the queue and transmitted.*/
+  if (obqTryFlushI(&_usb_hid_raw_output_queue))
+  {
+    size_t n;
+    uint8_t *buf = obqGetFullBufferI(&_usb_hid_raw_output_queue, &n);
+
+    osalDbgAssert(buf != NULL, "queue is empty");
+
+    usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP, buf, n);
+  }
+}
+
+static void _usb_hid_raw_configured_hook(void)
+{
+  ibqResetI(&_usb_hid_raw_input_queue);
+  bqResumeX(&_usb_hid_raw_input_queue);
+  obqResetI(&_usb_hid_raw_output_queue);
+  bqResumeX(&_usb_hid_raw_output_queue);
+
+  _usb_hid_raw_start_receive();
+}
+
 /*
  * Callback functions
  */
@@ -763,6 +861,8 @@ static void _usb_event_cb(USBDriver *usbp, usbevent_t event)
 
       /* Resetting the state of the CDC subsystem.*/
       sduConfigureHookI(&USB_CDC_DRIVER_HANDLE);
+
+      _usb_hid_raw_configured_hook();
 
       chSysUnlockFromISR();
       return;
@@ -844,7 +944,7 @@ static bool _usb_request_hook_cb(USBDriver *usbp)
     usbSetupTransfer(usbp, NULL, 0, NULL);
     return true;
   }
-  if (_usb_request_hook_hid(usbp))
+  if (_usb_hid_request_hook(usbp))
   {
     return TRUE;
   }
@@ -857,6 +957,7 @@ static void _usb_sof_cb(USBDriver *usbp)
 
   chSysLockFromISR();
   sduSOFHookI(&USB_CDC_DRIVER_HANDLE);
+  _usb_hid_raw_sof_hook();
   chSysUnlockFromISR();
 }
 
@@ -892,7 +993,7 @@ static void _usb_hid_kbd_idle_timer_cb(void *arg)
   chSysUnlockFromISR();
 }
 
-static void usb_hid_kbd_report_timer_cb(void *arg)
+static void _usb_hid_kbd_report_timer_cb(void *arg)
 {
   bool retry = (bool)arg;
   if (retry == FALSE)
@@ -904,17 +1005,126 @@ static void usb_hid_kbd_report_timer_cb(void *arg)
     if (_usb_hid_report_retry_counter < USB_HID_KBD_REPORT_RETRY_MAX)
     {
       _usb_hid_report_retry_counter++;
-      chVTSetI(&usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_RETRY_MS),
-               usb_hid_kbd_report_timer_cb, (void *)TRUE);
+      chVTSetI(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_RETRY_MS),
+               _usb_hid_kbd_report_timer_cb, (void *)TRUE);
       return;
     }
   }
   _usb_hid_report_retry_counter = 0;
 }
 
+static void _usb_hid_raw_in_cb(USBDriver *usbp, usbep_t ep)
+{
+  uint8_t *buf;
+  size_t n;
+
+  chSysLockFromISR();
+
+  /* Freeing the buffer just transmitted, if it was not a zero size packet.*/
+  if (usbp->epc[ep]->in_state->txsize > 0U)
+  {
+    obqReleaseEmptyBufferI(&_usb_hid_raw_output_queue);
+  }
+
+  /* Checking if there is a buffer ready for transmission.*/
+  buf = obqGetFullBufferI(&_usb_hid_raw_output_queue, &n);
+
+  if (buf != NULL)
+  {
+    /* The endpoint cannot be busy, we are in the context of the callback,
+       so it is safe to transmit without a check.*/
+    usbStartTransmitI(usbp, ep, buf, n);
+  }
+  else
+  {
+    /* Nothing to transmit.*/
+  }
+
+  chSysUnlockFromISR();
+}
+
+static void _usb_hid_raw_out_cb(USBDriver *usbp, usbep_t ep)
+{
+  size_t size;
+
+  chSysLockFromISR();
+
+  /* Checking for zero-size transactions.*/
+  size = usbGetReceiveTransactionSizeX(usbp, ep);
+  if (size > (size_t)0)
+  {
+    /* Posting the filled buffer in the queue.*/
+    ibqPostFullBufferI(&_usb_hid_raw_input_queue, size);
+  }
+
+  /* The endpoint cannot be busy, we are in the context of the callback,
+     so a packet is in the buffer for sure. Trying to get a free buffer
+     for the next transaction.*/
+  (void)_usb_hid_raw_start_receive();
+
+  chSysUnlockFromISR();
+}
+
+static void _usb_hid_raw_ibnotify_cb(io_buffers_queue_t *bqp)
+{
+  (void)bqp;
+  _usb_hid_raw_start_receive();
+}
+
+static void _usb_hid_raw_obnotify_cb(io_buffers_queue_t *bqp)
+{
+  (void)bqp;
+  size_t n;
+
+  /* If the USB driver is not in the appropriate state then transactions
+     must not be started.*/
+  if (usbGetDriverStateI(&USB_DRIVER_HANDLE) != USB_ACTIVE)
+  {
+    return;
+  }
+
+  /* Checking if there is already a transaction ongoing on the endpoint.*/
+  if (!usbGetTransmitStatusI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP))
+  {
+    /* Getting a full buffer, a buffer is available for sure because this
+       callback is invoked when one has been inserted.*/
+    uint8_t *buf = obqGetFullBufferI(&_usb_hid_raw_output_queue, &n);
+    osalDbgAssert(buf != NULL, "buffer not found");
+    usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP, buf, n);
+  }
+}
+
 /*
  * Shell functions
  */
+void usb_loop_hid_raw_input(BaseSequentialStream *chp, int argc, char *argv[])
+{
+  (void)argv;
+  if (argc > 0)
+  {
+    chprintf(chp, "usb-loop-hid-raw\r\n");
+    return;
+  }
+  chprintf(chp, "Dumping hid raw ouptut to console:\r\n");
+  while (chnGetTimeout((BaseChannel *)chp, TIME_IMMEDIATE) == Q_TIMEOUT)
+  {
+    uint8_t line_break = 0;
+    if (ibqGetFullBufferTimeoutS(&_usb_hid_raw_input_queue, TIME_MS2I(50)) == MSG_OK)
+    {
+      uint8_t *msg = _usb_hid_raw_input_queue.ptr;
+      size_t len = (size_t)_usb_hid_raw_input_queue.top - (size_t)_usb_hid_raw_input_queue.ptr;
+      uint8_t i = 0;
+      for (i = 0; i < len; i++)
+      {
+        line_break++;
+        uint8_t rn[3] = {'\r', '\n', 0};
+        rn[0] = ((line_break % 64) == 0) ? '\r' : 0;
+        chprintf(chp, "%02X %s", msg[i], rn);
+      }
+    }
+  }
+  chprintf(chp, "\r\n\nstopped\r\n");
+}
 
 /*
  * API functions
@@ -933,7 +1143,7 @@ void usb_hid_kbd_flush(void)
 
 void usb_hid_kbd_send_key(uint8_t key)
 {
-  chVTReset(&usb_hid_kbd_report_timer);
+  chVTReset(&_usb_hid_kbd_report_timer);
   _usb_hid_kbd_report_prepare->keys[_usb_hid_report_payload_idx] = key;
   _usb_hid_report_payload_idx++;
   if (_usb_hid_report_payload_idx == USB_HID_KBD_REPORT_KEYS)
@@ -942,8 +1152,8 @@ void usb_hid_kbd_send_key(uint8_t key)
   }
   else
   {
-    chVTSet(&usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_TIMEOUT_MS),
-            usb_hid_kbd_report_timer_cb, (void *)FALSE);
+    chVTSet(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_TIMEOUT_MS),
+            _usb_hid_kbd_report_timer_cb, (void *)FALSE);
   }
 }
 
@@ -961,10 +1171,6 @@ void usb_hid_kbdext_send_key(usb_hid_report_id_t report_id, uint16_t keyext)
 
   if (usbGetTransmitStatusI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP))
   {
-    /* Need to either suspend, or loop and call unlock/lock during
-     * every iteration - otherwise the system will remain locked,
-     * no interrupts served, so USB not going through as well.
-     * Note: for suspend, need USB_USE_WAIT == TRUE in halconf.h */
     chSysUnlock();
     chThdSuspendS(&(&USB_DRIVER_HANDLE)->epc[USB_HID_KBDEXT_EP]->in_state->thread);
     chSysLock();
@@ -973,7 +1179,15 @@ void usb_hid_kbdext_send_key(usb_hid_report_id_t report_id, uint16_t keyext)
   usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_KBDEXT_EP, (uint8_t *)&report,
                     sizeof(usb_hid_kbdext_report_t));
 
-  chSysUnlockFromISR();
-
   chSysUnlock();
+}
+
+size_t usb_hid_raw_send(uint8_t *msg, uint8_t size)
+{
+  return obqWriteTimeout(&_usb_hid_raw_output_queue, msg, size, TIME_INFINITE);
+}
+
+size_t usb_hid_raw_receive(uint8_t *msg, uint8_t size)
+{
+  return ibqReadTimeout(&_usb_hid_raw_input_queue, msg, size, TIME_INFINITE);
 }
