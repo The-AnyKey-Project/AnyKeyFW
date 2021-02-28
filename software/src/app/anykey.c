@@ -142,41 +142,55 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
       switch (action_list->actions[i])
       {
         case ANYKEY_ACTION_KEY_PRESS:
-          // TODO
-          i += 2;
+        {
+          anykey_action_key_t *action = (anykey_action_key_t *)&(action_list->actions[i]);
+          usb_hid_kbd_send_key(action->key);
+          i += sizeof(anykey_action_key_t);
           break;
+        }
         case ANYKEY_ACTION_KEYEXT_PRESS:
-          // TODO
-          i += 3;
+        {
+          anykey_action_keyext_t *action = (anykey_action_keyext_t *)&(action_list->actions[i]);
+          usb_hid_kbdext_send_key(action->report_id, action->key);
+          i += sizeof(anykey_action_keyext_t);
           break;
+        }
         case ANYKEY_ACTION_KEY_RELEASE:
-          // TODO
-          i += 2;
+        {
+          anykey_action_key_t *action = (anykey_action_key_t *)&(action_list->actions[i]);
+          usb_hid_kbd_send_key(action->key | 0x80);
+          i += sizeof(anykey_action_key_t);
           break;
+        }
         case ANYKEY_ACTION_KEYEXT_RELEASE:
-          // TODO
-          i += 3;
+        {
+          anykey_action_keyext_t *action = (anykey_action_keyext_t *)&(action_list->actions[i]);
+          usb_hid_kbdext_send_key(action->report_id, action->key | 0x8000);
+          i += sizeof(anykey_action_keyext_t);
           break;
+        }
         case ANYKEY_ACTION_NEXT_LAYER:
+          // no parameter -> no cast needed
           _anykey_set_layer(_anykey_current_layer->next);
-          i += 1;
+          i += sizeof(anykey_action_layer_t);
           break;
         case ANYKEY_ACTION_PREV_LAYER:
+          // no parameter -> no cast needed
           _anykey_set_layer(_anykey_current_layer->prev);
-          i += 1;
+          i += sizeof(anykey_action_layer_t);
           break;
         case ANYKEY_ACTION_ADJUST_CONTRAST:
         {
-          int8_t adjust = *((int8_t *)&action_list->actions[i]);
+          anykey_action_contrast_t *action = (anykey_action_contrast_t *)&(action_list->actions[i]);
           uint8_t sw_id = 0;
           for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
           {
             int16_t new_value = _anykey_current_display_contrast[sw_id];
-            new_value += adjust;
+            new_value += action->adjust;
             new_value = (new_value > 255) ? 255 : ((new_value < 0) ? 0 : new_value);
             glcd_set_contrast((glcd_display_id_t)sw_id, (uint8_t)new_value);
           }
-          i += 2;
+          i += sizeof(anykey_action_contrast_t);
         }
         break;
         default:

@@ -32,9 +32,33 @@ typedef struct _anykey_layer_t
   struct _anykey_layer_t* next;
   struct _anykey_layer_t* prev;
   char* name;
-  glcd_display_buffer_t displays[ANYKEY_NUMBER_OF_KEYS];
+  glcd_display_buffer_t* displays[ANYKEY_NUMBER_OF_KEYS];
   anykey_action_list_t* key_actions_press[ANYKEY_NUMBER_OF_KEYS];
   anykey_action_list_t* key_actions_release[ANYKEY_NUMBER_OF_KEYS];
 } anykey_layer_t;
+
+typedef struct
+{
+  anykey_action_t action;
+  uint8_t key;
+} anykey_action_key_t;
+
+typedef struct
+{
+  anykey_action_t action;
+  uint8_t report_id;
+  uint16_t key;
+} anykey_action_keyext_t;
+
+typedef struct
+{
+  anykey_action_t action;
+} anykey_action_layer_t;
+
+typedef struct
+{
+  anykey_action_t action;
+  int8_t adjust;
+} anykey_action_contrast_t;
 
 #endif /* INC_TYPES_APP_ANYKEY_TYPES_H_ */
