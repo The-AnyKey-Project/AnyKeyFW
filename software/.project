@@ -83,6 +83,11 @@
 			<locationURI>$%7BPROJECT_LOC%7D/.3rdparty/ChibiOS_20.3.0/os/hal/boards/MAPLEMINI_STM32_F103</locationURI>
 		</link>
 		<link>
+			<name>community</name>
+			<type>2</type>
+			<locationURI>PROJECT_LOC/.3rdparty/ChibiOS_20.3.0/community</locationURI>
+		</link>
+		<link>
 			<name>os</name>
 			<type>2</type>
 			<locationURI>$%7BPROJECT_LOC%7D/.3rdparty/ChibiOS_20.3.0/os</locationURI>

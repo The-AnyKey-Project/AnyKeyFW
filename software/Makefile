@@ -114,6 +114,7 @@ MCU  = cortex-m3
 
 # Imported source files and paths.
 CHIBIOS  := ./.3rdparty/ChibiOS_$(OS_VERSION)
+CHIBIOS_CONTRIB := $(CHIBIOS)/community
 U8G2     := ./.3rdparty/u8g2/csrc
 CONFDIR  := ./inc/cfg/chibi
 BUILDDIR := ./build
@@ -124,8 +125,8 @@ include $(CHIBIOS)/os/license/license.mk
 # Startup files.
 include $(CHIBIOS)/os/common/startup/ARMCMx/compilers/GCC/mk/startup_stm32f1xx.mk
 # HAL-OSAL files (optional).
-include $(CHIBIOS)/os/hal/hal.mk
-include $(CHIBIOS)/os/hal/ports/STM32/STM32F1xx/platform.mk
+include $(CHIBIOS_CONTRIB)/os/hal/hal.mk
+include $(CHIBIOS_CONTRIB)/os/hal/ports/STM32/STM32F1xx/platform.mk
 include $(CHIBIOS)/os/hal/boards/MAPLEMINI_STM32_F103/board.mk
 include $(CHIBIOS)/os/hal/osal/rt-nil/osal.mk
 # RTOS files (optional).
@@ -192,6 +193,7 @@ CSRC = $(ALLCSRC) \
        src/main.c \
        src/app/anykey.c \
        src/app/cmd_shell.c \
+       src/hal/flash_storage.c \
        src/hal/glcd.c \
        src/hal/keypad.c \
        src/hal/usb.c \
@@ -207,7 +209,7 @@ ASMSRC = $(ALLASMSRC)
 ASMXSRC = $(ALLXASMSRC)
 
 # Inclusion directories.
-INCDIR = $(CONFDIR) $(ALLINC) $(U8G2) inc 
+INCDIR = $(CONFDIR) $(ALLINC) $(U8G2) $(CHIBIOS_CONTRIB)/os/various/ inc 
 
 # Define C warning options here.
 CWARN = -Wall -Wextra -Wundef -Wstrict-prototypes

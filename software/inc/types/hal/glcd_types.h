@@ -30,7 +30,11 @@ typedef struct
   uint8_t y_size;
   uint8_t x_offset;
   uint8_t y_offset;
-  uint8_t *content;
+} glcd_display_header_t;
+typedef struct
+{
+  glcd_display_header_t header;
+  uint8_t content[];
 } glcd_display_buffer_t;
 
 #endif /* INC_TYPES_HAL_GLCD_TYPES_H_ */

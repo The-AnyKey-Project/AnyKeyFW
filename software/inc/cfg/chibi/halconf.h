@@ -73,7 +73,7 @@
  * @brief   Enables the EFlash subsystem.
  */
 #if !defined(HAL_USE_EFL) || defined(__DOXYGEN__)
-#define HAL_USE_EFL                         FALSE
+#define HAL_USE_EFL                         TRUE
 #endif
 
 /**
@@ -526,6 +526,8 @@
 #if !defined(WSPI_USE_MUTUAL_EXCLUSION) || defined(__DOXYGEN__)
 #define WSPI_USE_MUTUAL_EXCLUSION           FALSE
 #endif
+
+#include "halconf_community.h"
 
 #endif /* HALCONF_H */
 

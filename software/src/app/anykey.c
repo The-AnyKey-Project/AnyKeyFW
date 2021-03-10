@@ -23,6 +23,7 @@
  * Include dependencies
  */
 #include "api/app/cmd_shell.h"
+#include "api/hal/flash_storage.h"
 #include "api/hal/glcd.h"
 #include "api/hal/keypad.h"
 #include "api/hal/usb.h"
@@ -84,10 +85,12 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
           switch (dest[sw_id])
           {
             case KEYPAD_EVENT_PRESS:
-              _anykey_handle_action(_anykey_current_layer->key_actions_press[sw_id]);
+              _anykey_handle_action(flash_storage_get_pointer_from_offset(
+                  _anykey_current_layer->key_action_press_idx[sw_id]));
               break;
             case KEYPAD_EVENT_RELEASE:
-              _anykey_handle_action(_anykey_current_layer->key_actions_release[sw_id]);
+              _anykey_handle_action(flash_storage_get_pointer_from_offset(
+                  _anykey_current_layer->key_action_release_idx[sw_id]));
               break;
             case KEYPAD_EVENT_NONE:
             default:
@@ -128,7 +131,7 @@ static void _anykey_set_layer(anykey_layer_t *layer)
     chSysLock();
     _anykey_current_layer = layer;
     chSysUnlock();
-    glcd_set_displays(layer->displays);
+    glcd_set_displays(layer->display_idx);
   }
 }
 
@@ -171,12 +174,12 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
         }
         case ANYKEY_ACTION_NEXT_LAYER:
           // no parameter -> no cast needed
-          _anykey_set_layer(_anykey_current_layer->next);
+          _anykey_set_layer(flash_storage_get_pointer_from_offset(_anykey_current_layer->next_idx));
           i += sizeof(anykey_action_layer_t);
           break;
         case ANYKEY_ACTION_PREV_LAYER:
           // no parameter -> no cast needed
-          _anykey_set_layer(_anykey_current_layer->prev);
+          _anykey_set_layer(flash_storage_get_pointer_from_offset(_anykey_current_layer->prev_idx));
           i += sizeof(anykey_action_layer_t);
           break;
         case ANYKEY_ACTION_ADJUST_CONTRAST:
@@ -212,6 +215,8 @@ static void _anykey_init_hal(void)
 
 static void _anykey_init_module(void)
 {
+  _anykey_set_layer(flash_storage_get_initial_layer());
+
   chThdCreateStatic(_anykey_key_stack, sizeof(_anykey_key_stack), ANYKEY_KEY_THREAD_PRIO,
                     _anykey_key_thread, NULL);
   chThdCreateStatic(_anykey_cmd_stack, sizeof(_anykey_cmd_stack), ANYKEY_CMD_THREAD_PRIO,
@@ -269,6 +274,7 @@ void anykey_init(void)
   /*
    * Project specific hal initialization
    */
+  flash_storage_init();
   glcd_init();
   keypad_init();
   usb_init();

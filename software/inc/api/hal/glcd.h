@@ -12,7 +12,7 @@
 #include "types/hal/glcd_types.h"
 
 extern void glcd_init(void);
-extern void glcd_set_displays(glcd_display_buffer_t** buffer);
+extern void glcd_set_displays(uint32_t *buffer);
 extern uint8_t glcd_set_contrast(glcd_display_id_t display, uint8_t value);
 
 #endif /* INC_API_GLCD_H_ */

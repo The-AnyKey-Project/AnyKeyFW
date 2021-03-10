@@ -22,6 +22,7 @@
 /*
  * Include dependencies
  */
+#include "api/hal/flash_storage.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -55,7 +56,7 @@ static const SPIConfig _glcd_spid_cfg = {
 
 static THD_WORKING_AREA(_glcd_update_stack, GLCD_UPDATE_THREAD_STACK);
 static u8g2_t _glcd_display;
-static glcd_display_buffer_t **_glcd_display_buffers = NULL;
+static uint32_t *_glcd_display_buffers = NULL;
 static uint8_t _glcd_display_buffers_dirty = 0;
 static mutex_t _glcd_display_mtx[GLCD_DISP_MAX];
 static uint32_t _glcd_display_cs_lines[GLCD_DISP_MAX] = {
@@ -84,7 +85,8 @@ static __attribute__((noreturn)) THD_FUNCTION(_glcd_update_thread, arg)
       uint8_t display = 0;
       for (display = 0; display < GLCD_DISP_MAX; display++)
       {
-        _glcd_draw_bitmap(display, _glcd_display_buffers[display]);
+        _glcd_draw_bitmap(display,
+                          flash_storage_get_pointer_from_offset(_glcd_display_buffers[display]));
       }
       chSysLock();
       _glcd_display_buffers_dirty = 0;
@@ -192,8 +194,9 @@ static void _glcd_init_display(void)
 static void _glcd_draw_bitmap(glcd_display_id_t display, glcd_display_buffer_t *object)
 {
   _glcd_select_display(display);
-  u8g2_DrawBitmap(&_glcd_display, object->x_offset, object->y_offset,
-                  object->x_size / GLCD_DISPLAY_BLOCK_SIZE, object->y_size, object->content);
+  u8g2_DrawBitmap(&_glcd_display, object->header.x_offset, object->header.y_offset,
+                  object->header.x_size / GLCD_DISPLAY_BLOCK_SIZE, object->header.y_size,
+                  object->content);
   u8g2_SendBuffer(&_glcd_display);
   _glcd_unselect_display(display);
 }
@@ -277,7 +280,7 @@ void glcd_init(void)
   _glcd_init_module();
 }
 
-void glcd_set_displays(glcd_display_buffer_t **buffer)
+void glcd_set_displays(uint32_t *buffer)
 {
   chSysLockFromISR();
   _glcd_display_buffers = buffer;

@@ -23,18 +23,20 @@ typedef enum
 
 typedef struct
 {
-  uint8_t length;
-  uint8_t* actions;
+  uint8_t length;     // length of action list
+  uint8_t actions[];  // flash storage idx of first entry
 } anykey_action_list_t;
 
 typedef struct _anykey_layer_t
 {
-  struct _anykey_layer_t* next;
-  struct _anykey_layer_t* prev;
-  char* name;
-  glcd_display_buffer_t* displays[ANYKEY_NUMBER_OF_KEYS];
-  anykey_action_list_t* key_actions_press[ANYKEY_NUMBER_OF_KEYS];
-  anykey_action_list_t* key_actions_release[ANYKEY_NUMBER_OF_KEYS];
+  uint32_t next_idx;                            // flash storage idx of next layer
+  uint32_t prev_idx;                            // flash storage idx of prev layer
+  uint32_t name_idx;                            // flash storage idx of name
+  uint32_t display_idx[ANYKEY_NUMBER_OF_KEYS];  // array of flash storage idx for display buffers
+  uint32_t key_action_press_idx[ANYKEY_NUMBER_OF_KEYS];  // array of flash storage idx for key press
+                                                         // actions
+  uint32_t key_action_release_idx[ANYKEY_NUMBER_OF_KEYS];  // array of flash storage idx for key
+                                                           // release actions
 } anykey_layer_t;
 
 typedef struct
