@@ -117,6 +117,7 @@
 #define CRCSW_PROGRAMMABLE FALSE
 #define CRC_USE_DMA        FALSE
 #define rccEnableCRC(lp)   rccEnableAHB(RCC_AHBENR_CRCEN, lp)
+#define rccDisableCRC()    rccDisableAHB(RCC_AHBENR_CRCEN)
 
 /*
  * EICU driver system settings.
