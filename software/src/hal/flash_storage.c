@@ -42,7 +42,7 @@ static uint8_t *_flash_storage_area = NULL;
 static const flash_storage_default_layer_t _flash_storage_default_layer = {
     .flash_header =
         {
-            .crc = 0xa0cc9b21,
+            .crc = 0x971EB07D,
             .version = FLASH_STORAGE_HEADER_VERSION,
             .initial_layer_idx = offsetof(flash_storage_default_layer_t, layer_header),
             .first_layer_idx = offsetof(flash_storage_default_layer_t, layer_header),
@@ -51,7 +51,7 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
         {
             .next_idx = 0,
             .prev_idx = 0,
-            .name_idx = sizeof(anykey_layer_t),
+            .name_idx = offsetof(flash_storage_default_layer_t, name),
             .display_idx =
                 {
                     offsetof(flash_storage_default_layer_t, db[0]),
@@ -159,44 +159,45 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
     .kr_1 =
         {
             .length = 2 * sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0xE0)},  // ctrl
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x06)},  // c
+            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x06 | 0x80)},  // c
+            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0xE0 | 0x80)},  // ctrl
         },
     .kr_2 =
         {
             .length = 2 * sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0xE0)},  // ctrl
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x1B)},  // x
+            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x1B | 0x80)},  // x
+            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0xE0 | 0x80)},  // ctrl
         },
     .kr_3 =
         {
             .length = 2 * sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0xE0)},  // ctrl
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x19)},  // v
+            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x19 | 0x80)},  // v
+            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0xE0 | 0x80)},  // ctrl
         },
     .kr_4 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_RELEASE,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0xE2)},  // vol mute
+            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(
+                ANYKEY_ACTION_KEYEXT_RELEASE, USB_HID_REPORT_ID_CONSUMER, 0xE2 | 0x8000)},  // vol 0
         },
     .kr_5 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_RELEASE,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0xEA)},  // vol -
+            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(
+                ANYKEY_ACTION_KEYEXT_RELEASE, USB_HID_REPORT_ID_CONSUMER, 0xEA | 0x8000)},  // vol -
         },
     .kr_6 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_RELEASE,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0xE9)},  // vol +
+            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(
+                ANYKEY_ACTION_KEYEXT_RELEASE, USB_HID_REPORT_ID_CONSUMER, 0xE9 | 0x8000)},  // vol +
         },
     .kr_7 =
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_RELEASE,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0x0223)},  // browser
+                                                   USB_HID_REPORT_ID_CONSUMER,
+                                                   0x0223 | 0x8000)},  // browser
         },
 };
 /*
@@ -248,9 +249,30 @@ static void _flash_storage_write_default_config(void)
 
 void flash_storage_info_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
-  (void)chp;
   (void)argc;
   (void)argv;
+
+  if (argc != 0)
+  {
+    chprintf(chp, "Usage: flash-storage-info-sh name\r\n");
+    return;
+  }
+  flash_storage_header_t *header = (flash_storage_header_t *)_flash_storage_area;
+  uint32_t crc = crcCalcI(&FLASH_STORAGE_CRC_HANDLE, FLASH_STORAGE_SIZE - sizeof(crc_t),
+                          &_flash_storage_area[sizeof(crc_t)]);
+  if (header->crc != crc)
+  {
+    chprintf(chp, "Warning CRC missmatch!\r\nActual CRC of flash partition is 0x%08x\r\n", crc);
+  }
+  chprintf(chp, "Flash partition starts at 0x%08p with size of %d bytes\r\n\r\n", header,
+           FLASH_STORAGE_SIZE);
+
+  chprintf(chp, "CRC           0x%08x\r\n", header->crc);
+  chprintf(chp, "Version         %8d\r\n", header->version);
+  chprintf(chp, "Initial layer 0x%08x\r\n",
+           flash_storage_get_pointer_from_offset(header->initial_layer_idx));
+  chprintf(chp, "First layer   0x%08x\r\n",
+           flash_storage_get_pointer_from_offset(header->first_layer_idx));
 }
 
 /*

@@ -25,6 +25,7 @@
  */
 #include "api/hal/usb.h"
 #include "cmd/app/anykey_cmd.h"
+#include "cmd/hal/flash_storage_cmd.h"
 #include "cmd/hal/glcd_cmd.h"
 #include "cmd/hal/keypad_cmd.h"
 #include "cmd/hal/usb_cmd.h"
@@ -42,6 +43,7 @@ static void _cmd_shell_init_module(void);
 // clang-format off
 static const ShellCommand _cmd_shell_cmds[] = {
   ANYKEY_CMD_LIST,
+  FLASH_STORAGE_CMD_LIST,
   GLCD_CMD_LIST,
   KEYPAD_CMD_LIST,
   USB_CMD_LIST,

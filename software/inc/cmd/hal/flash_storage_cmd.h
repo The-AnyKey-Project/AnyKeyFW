@@ -20,6 +20,6 @@ extern void flash_storage_info_sh(BaseSequentialStream *chp, int argc, char *arg
  */
 // clang-format off
 #define FLASH_STORAGE_CMD_LIST \
-            {"flash-storage-info-sh",   flash_storage_info_sh}, \
+            {"flash-storage-info-sh",   flash_storage_info_sh} \
 // clang-format on
 #endif /* INC_CMD_HAL_FLASH_STORAGE_CMD_H_ */
