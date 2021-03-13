@@ -1141,20 +1141,25 @@ void usb_hid_kbd_flush(void)
   _usb_hid_kbd_send_report(FALSE);
 }
 
-void usb_hid_kbd_send_key(uint8_t key)
+void usb_hid_kbd_send_key(uint8_t mods, uint8_t key)
 {
   chVTReset(&_usb_hid_kbd_report_timer);
-  _usb_hid_kbd_report_prepare->keys[_usb_hid_report_payload_idx] = key;
-  _usb_hid_report_payload_idx++;
-  if (_usb_hid_report_payload_idx == USB_HID_KBD_REPORT_KEYS)
+  if (_usb_hid_report_payload_idx && mods != _usb_hid_kbd_report_prepare->mods)
   {
     usb_hid_kbd_flush();
   }
-  else
+  _usb_hid_kbd_report_prepare->mods = mods;
+  _usb_hid_kbd_report_prepare->keys[_usb_hid_report_payload_idx] = key;
+  _usb_hid_report_payload_idx++;
+  //  if (_usb_hid_report_payload_idx == USB_HID_KBD_REPORT_KEYS)
   {
-    chVTSet(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_TIMEOUT_MS),
-            _usb_hid_kbd_report_timer_cb, (void *)FALSE);
+    usb_hid_kbd_flush();
   }
+  //  else
+  //  {
+  //    chVTSet(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_TIMEOUT_MS),
+  //            _usb_hid_kbd_report_timer_cb, (void *)FALSE);
+  //  }
 }
 
 void usb_hid_kbdext_send_key(usb_hid_report_id_t report_id, uint16_t keyext)

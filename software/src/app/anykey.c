@@ -29,6 +29,7 @@
 #include "api/hal/usb.h"
 #include <assert.h>
 #include <string.h>
+#include <stdlib.h>
 
 /*
  * Static asserts
@@ -183,7 +184,7 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
         case ANYKEY_ACTION_KEY_PRESS:
         {
           anykey_action_key_t *action = (anykey_action_key_t *)&(action_list->actions[i]);
-          usb_hid_kbd_send_key(action->key);
+          usb_hid_kbd_send_key(action->mods, action->key);
           i += sizeof(anykey_action_key_t);
           break;
         }
@@ -197,7 +198,7 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
         case ANYKEY_ACTION_KEY_RELEASE:
         {
           anykey_action_key_t *action = (anykey_action_key_t *)&(action_list->actions[i]);
-          usb_hid_kbd_send_key(action->key | 0x80);
+          usb_hid_kbd_send_key(action->mods, action->key | 0x80);
           i += sizeof(anykey_action_key_t);
           break;
         }
@@ -240,6 +241,93 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
   }
 }
 
+static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t *action_list)
+{
+  uint8_t i = 0;
+  if (action_list)
+  {
+    chprintf(chp, "Decoding list with %d bytes length\r\n", action_list->length);
+    chprintf(chp, "%-16s %-16s Raw\r\n", "Action", "Operators");
+    while (i < action_list->length &&
+           chnGetTimeout((BaseChannel *)chp, TIME_IMMEDIATE) == Q_TIMEOUT)
+    {
+      uint8_t raw_length = 0;
+      char action_name[16];
+      char operators[16];
+      switch (action_list->actions[i])
+      {
+        case ANYKEY_ACTION_KEY_PRESS:
+        {
+          anykey_action_key_t *action = (anykey_action_key_t *)&(action_list->actions[i]);
+          chsnprintf(action_name, sizeof(action_name), "%s", "KEY_PRESS");
+          chsnprintf(operators, sizeof(operators), "0x%02x 0x%02x", action->mods, action->key);
+          raw_length = sizeof(anykey_action_key_t);
+          break;
+        }
+        case ANYKEY_ACTION_KEYEXT_PRESS:
+        {
+          anykey_action_keyext_t *action = (anykey_action_keyext_t *)&(action_list->actions[i]);
+          chsnprintf(action_name, sizeof(action_name), "%s", "KEYEXT_PRESS");
+          chsnprintf(operators, sizeof(operators), "0x%02x 0x%04x", action->report_id, action->key);
+          raw_length = sizeof(anykey_action_keyext_t);
+          break;
+        }
+        case ANYKEY_ACTION_KEY_RELEASE:
+        {
+          anykey_action_key_t *action = (anykey_action_key_t *)&(action_list->actions[i]);
+          chsnprintf(action_name, sizeof(action_name), "%s", "KEY_RELEASE");
+          chsnprintf(operators, sizeof(operators), "0x%02x 0x%02x", action->mods, action->key);
+          raw_length = sizeof(anykey_action_key_t);
+          break;
+        }
+        case ANYKEY_ACTION_KEYEXT_RELEASE:
+        {
+          anykey_action_keyext_t *action = (anykey_action_keyext_t *)&(action_list->actions[i]);
+          chsnprintf(action_name, sizeof(action_name), "%s", "KEYEXT_RELEASE");
+          chsnprintf(operators, sizeof(operators), "0x%02x 0x%04x", action->report_id, action->key);
+          raw_length = sizeof(anykey_action_keyext_t);
+          break;
+        }
+        case ANYKEY_ACTION_NEXT_LAYER:
+          chsnprintf(action_name, sizeof(action_name), "%s", "NEXT_LAYER");
+          operators[0] = '\0';
+          raw_length = sizeof(anykey_action_layer_t);
+          break;
+        case ANYKEY_ACTION_PREV_LAYER:
+          chsnprintf(action_name, sizeof(action_name), "%s", "PREV_LAYER");
+          operators[0] = '\0';
+          raw_length = sizeof(anykey_action_layer_t);
+          break;
+        case ANYKEY_ACTION_ADJUST_CONTRAST:
+        {
+          anykey_action_contrast_t *action = (anykey_action_contrast_t *)&(action_list->actions[i]);
+          chsnprintf(action_name, sizeof(action_name), "%s", "ADJUST_CONTRAST");
+          chsnprintf(operators, sizeof(operators), "%4d", action->adjust);
+          raw_length = sizeof(anykey_action_contrast_t);
+        }
+        break;
+        default:
+          raw_length = 0;
+          i++;
+          break;
+      }
+      if (raw_length)
+      {
+        chprintf(chp, "%-16s %-16s ", action_name, operators);
+        uint8_t x = 0;
+
+        for (x = 0; x < raw_length; x++)
+        {
+          chprintf(chp, "0x%02x ", action_list->actions[i + x]);
+        }
+
+        chprintf(chp, "\r\n");
+        i += raw_length;
+      }
+    }
+  }
+}
+
 /*
  * Callback functions
  */
@@ -250,16 +338,18 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
 
 void anykey_show_actions(BaseSequentialStream *chp, int argc, char *argv[])
 {
-  (void)chp;
-  (void)argc;
-  (void)argv;
+  if (argc != 1)
+  {
+    chprintf(chp, "Usage: ak-show-actions address\r\n");
+    return;
+  }
+  anykey_action_list_t *action_list = (anykey_action_list_t *)strtol(argv[0], NULL, 16);
+  chprintf(chp, "Trying to decode action list at address 0x%08p\r\n\r\n", action_list);
+  _anykey_show_actions(chp, action_list);
 }
 
 void anykey_show_layer_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
-  (void)argc;
-  (void)argv;
-
   if (argc != 1)
   {
     chprintf(chp, "Usage: ak-show-layer name\r\n");

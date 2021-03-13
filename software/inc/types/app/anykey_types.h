@@ -42,6 +42,7 @@ typedef struct _anykey_layer_t
 typedef struct
 {
   anykey_action_t action;
+  uint8_t mods;
   uint8_t key;
 } anykey_action_key_t;
 

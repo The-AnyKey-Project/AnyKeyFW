@@ -13,6 +13,7 @@
  * for module flash storage
  */
 extern void flash_storage_info_sh(BaseSequentialStream *chp, int argc, char *argv[]);
+extern void flash_storage_write_default_sh(BaseSequentialStream *chp, int argc, char *argv[]);
 
 /*
  * Shell command list
@@ -20,6 +21,7 @@ extern void flash_storage_info_sh(BaseSequentialStream *chp, int argc, char *arg
  */
 // clang-format off
 #define FLASH_STORAGE_CMD_LIST \
-            {"flash-storage-info-sh",   flash_storage_info_sh} \
+            {"fs-info",   flash_storage_info_sh}, \
+            {"fs-write-default",   flash_storage_write_default_sh} \
 // clang-format on
 #endif /* INC_CMD_HAL_FLASH_STORAGE_CMD_H_ */

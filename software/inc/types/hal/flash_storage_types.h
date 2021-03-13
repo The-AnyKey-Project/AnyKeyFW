@@ -125,7 +125,7 @@ typedef struct
              .x_offset = ((GLCD_DISPLAY_WIDTH - FLASH_STORAGE_DEFCONFIG_DB_X_SIZE) / 2),   \
              .y_offset = ((GLCD_DISPLAY_HEIGHT - FLASH_STORAGE_DEFCONFIG_DB_Y_SIZE) / 2)}, \
   .content = {x}
-#define FLASH_STORAGE_KEY_CONTENT(x, y)       .action = x, .key = y
+#define FLASH_STORAGE_KEY_CONTENT(x, y, z)    .action = x, .mods = y, .key = z
 #define FLASH_STORAGE_KEYEXT_CONTENT(x, y, z) .action = x, .report_id = y, .key = z
 #define FLASH_STORAGE_CONTRAST_CONTENT(x, y)  .action = x, .adjust = y
 

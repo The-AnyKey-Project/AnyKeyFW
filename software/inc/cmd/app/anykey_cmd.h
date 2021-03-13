@@ -23,7 +23,7 @@ extern void anykey_set_layer_sh(BaseSequentialStream *chp, int argc, char *argv[
  */
 // clang-format off
 #define ANYKEY_CMD_LIST \
-            {"ak-show-actios", anykey_show_actions}, \
+            {"ak-show-actions", anykey_show_actions}, \
             {"ak-show-layer",  anykey_show_layer_sh}, \
             {"ak-list-layers", anykey_list_layers_sh}, \
             {"ak-set-layer",   anykey_set_layer_sh}
