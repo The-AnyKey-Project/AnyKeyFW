@@ -14,6 +14,7 @@
  */
 extern void glcd_set_contrast_sh(BaseSequentialStream *chp, int argc, char *argv[]);
 extern void glcd_get_contrast_sh(BaseSequentialStream *chp, int argc, char *argv[]);
+extern void glcd_reload_contrast_sh(BaseSequentialStream *chp, int argc, char *argv[]);
 
 /*
  * Shell command list
@@ -21,8 +22,9 @@ extern void glcd_get_contrast_sh(BaseSequentialStream *chp, int argc, char *argv
  */
 // clang-format off
 #define GLCD_CMD_LIST \
-    {"glcd-set-contrast",   glcd_set_contrast_sh}, \
-    {"glcd-get-contrast",   glcd_get_contrast_sh}
+    {"glcd-set-contrast",    glcd_set_contrast_sh}, \
+    {"glcd-get-contrast",    glcd_get_contrast_sh}, \
+    {"glcd-reload-contrast", glcd_reload_contrast_sh}
 // clang-format on
 
 #endif /* INC_CMD_GLCD_CMD_H_ */

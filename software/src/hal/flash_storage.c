@@ -186,26 +186,27 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
     .kr_4 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_RELEASE,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0xE2)},  // vol 0
+            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(
+                ANYKEY_ACTION_KEYEXT_RELEASE, USB_HID_REPORT_ID_CONSUMER, 0xE2)},  // release vol 0
         },
     .kr_5 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_RELEASE,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0xEA)},  // vol -
+            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(
+                ANYKEY_ACTION_KEYEXT_RELEASE, USB_HID_REPORT_ID_CONSUMER, 0xEA)},  // release vol -
         },
     .kr_6 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_RELEASE,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0xE9)},  // vol +
+            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(
+                ANYKEY_ACTION_KEYEXT_RELEASE, USB_HID_REPORT_ID_CONSUMER, 0xE9)},  // release vol +
         },
     .kr_7 =
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_RELEASE,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0x0223)},  // browser
+                                                   USB_HID_REPORT_ID_CONSUMER,
+                                                   0x0223)},  // release browser
         },
 };
 /*

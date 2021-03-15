@@ -42,6 +42,7 @@ static void _glcd_set_contrast(uint8_t value);
 static void _glcd_clear_display(void);
 static uint8_t _glcd_u8g2_hw_spi(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
 static uint8_t _glcd_u8g2_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr);
+static void _glcd_reload_contrast(void);
 
 /*
  * Static variables
@@ -127,7 +128,6 @@ static void _glcd_init_module(void)
   {
     chMtxObjectInit(&_glcd_display_mtx[display]);
   }
-  flash_storage_get_display_contrast(_glcd_current_display_contrast);
   _glcd_init_display();
   chThdCreateStatic(_glcd_update_stack, sizeof(_glcd_update_stack), GLCD_UPDATE_THREAD_PRIO,
                     _glcd_update_thread, NULL);
@@ -189,12 +189,7 @@ static void _glcd_init_display(void)
    */
   _glcd_setup_display();
   _glcd_unselect_all();
-
-  uint8_t display = 0;
-  for (display = 0; display < GLCD_DISP_MAX; display++)
-  {
-    glcd_set_contrast(display, _glcd_current_display_contrast[display]);
-  }
+  _glcd_reload_contrast();
 }
 
 static void _glcd_draw_bitmap(glcd_display_id_t display, glcd_display_buffer_t *object)
@@ -254,6 +249,17 @@ static uint8_t _glcd_u8g2_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_
   return 1;  // command processed successfully.
 }
 
+static void _glcd_reload_contrast(void)
+{
+  flash_storage_get_display_contrast(_glcd_current_display_contrast);
+
+  uint8_t display = 0;
+  for (display = 0; display < GLCD_DISP_MAX; display++)
+  {
+    glcd_set_contrast(display, _glcd_current_display_contrast[display]);
+  }
+}
+
 /*
  * Shell functions
  */
@@ -293,6 +299,20 @@ void glcd_get_contrast_sh(BaseSequentialStream *chp, int argc, char *argv[])
     chprintf(chp, "%3d ", _glcd_current_display_contrast[display]);
   }
   chprintf(chp, "\r\n");
+}
+
+void glcd_reload_contrast_sh(BaseSequentialStream *chp, int argc, char *argv[])
+{
+  (void)argv;
+  if (argc != 0)
+  {
+    chprintf(chp, "Usage: glcd-reload-contrast\r\n");
+    return;
+  }
+
+  chprintf(chp, "Reloading contrast values form flash...");
+  _glcd_reload_contrast();
+  chprintf(chp, "done!\r\n");
 }
 
 /*
