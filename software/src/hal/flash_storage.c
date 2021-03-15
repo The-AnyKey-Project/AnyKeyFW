@@ -43,10 +43,15 @@ static uint8_t *_flash_storage_area = NULL;
 static const flash_storage_default_layer_t _flash_storage_default_layer = {
     .flash_header =
         {
-            .crc = 0x31D6D761,
+            .crc = 0x2ED6B6EE,
             .version = FLASH_STORAGE_HEADER_VERSION,
             .initial_layer_idx = offsetof(flash_storage_default_layer_t, layer_header),
             .first_layer_idx = offsetof(flash_storage_default_layer_t, layer_header),
+            .display_contrast = {GLCD_DEFAULT_BRIGHTNESS, GLCD_DEFAULT_BRIGHTNESS,
+                                 GLCD_DEFAULT_BRIGHTNESS, GLCD_DEFAULT_BRIGHTNESS,
+                                 GLCD_DEFAULT_BRIGHTNESS, GLCD_DEFAULT_BRIGHTNESS,
+                                 GLCD_DEFAULT_BRIGHTNESS, GLCD_DEFAULT_BRIGHTNESS,
+                                 GLCD_DEFAULT_BRIGHTNESS},
         },
     .layer_header =
         {
@@ -279,6 +284,15 @@ void flash_storage_info_sh(BaseSequentialStream *chp, int argc, char *argv[])
            flash_storage_get_pointer_from_offset(header->initial_layer_idx));
   chprintf(chp, "First layer   0x%08x\r\n",
            flash_storage_get_pointer_from_offset(header->first_layer_idx));
+  chprintf(chp, "Display    0   1   2   3   4   5   6   7   8\r\n");
+  chprintf(chp, "Contrast ");
+  uint8_t display = 0;
+  uint8_t *initial_contrast = ((flash_storage_header_t *)_flash_storage_area)->display_contrast;
+  for (display = 0; display < GLCD_DISP_MAX; display++)
+  {
+    chprintf(chp, "%3d ", initial_contrast[display]);
+  }
+  chprintf(chp, "\r\n");
 }
 
 void flash_storage_write_default_sh(BaseSequentialStream *chp, int argc, char *argv[])
@@ -335,6 +349,15 @@ anykey_layer_t *flash_storage_get_layer_by_name(char *name)
     layer = flash_storage_get_pointer_from_offset(layer->next_idx);
   }
   return NULL;
+}
+
+void flash_storage_get_display_contrast(uint8_t *contrast_buffer)
+{
+  if (contrast_buffer)
+  {
+    flash_storage_header_t *header = (flash_storage_header_t *)_flash_storage_area;
+    memcpy(contrast_buffer, header->display_contrast, sizeof(uint8_t) * ANYKEY_NUMBER_OF_KEYS);
+  }
 }
 
 void flash_storage_write_config(uint32_t offset, uint32_t size, uint8_t *buffer)

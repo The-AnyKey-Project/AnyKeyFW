@@ -54,7 +54,6 @@ static void _anykey_handle_action(anykey_action_list_t *action_list);
 static THD_WORKING_AREA(_anykey_key_stack, ANYKEY_KEY_THREAD_STACK);
 static THD_WORKING_AREA(_anykey_cmd_stack, ANYKEY_CMD_THREAD_STACK);
 static anykey_layer_t *_anykey_current_layer = (anykey_layer_t *)NULL;
-static uint8_t _anykey_current_display_contrast[ANYKEY_NUMBER_OF_KEYS];
 
 /*
  * Global variables
@@ -225,7 +224,7 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
           uint8_t sw_id = 0;
           for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
           {
-            int16_t new_value = _anykey_current_display_contrast[sw_id];
+            int16_t new_value = (int16_t)glcd_get_contrast(sw_id);
             new_value += action->adjust;
             new_value = (new_value > 255) ? 255 : ((new_value < 0) ? 0 : new_value);
             glcd_set_contrast((glcd_display_id_t)sw_id, (uint8_t)new_value);

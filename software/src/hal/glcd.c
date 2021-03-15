@@ -25,7 +25,6 @@
 #include "api/hal/flash_storage.h"
 #include <stdlib.h>
 #include <string.h>
-
 #include "api/app/anykey.h"
 
 /*
@@ -59,6 +58,7 @@ static u8g2_t _glcd_display;
 static uint32_t *_glcd_display_buffers = NULL;
 static uint8_t _glcd_display_buffers_dirty = 0;
 static mutex_t _glcd_display_mtx[GLCD_DISP_MAX];
+static uint8_t _glcd_current_display_contrast[GLCD_DISP_MAX];
 static uint32_t _glcd_display_cs_lines[GLCD_DISP_MAX] = {
     GLCD_CS_LINE_1, GLCD_CS_LINE_2, GLCD_CS_LINE_3, GLCD_CS_LINE_4, GLCD_CS_LINE_5,
     GLCD_CS_LINE_6, GLCD_CS_LINE_7, GLCD_CS_LINE_8, GLCD_CS_LINE_9};
@@ -127,6 +127,7 @@ static void _glcd_init_module(void)
   {
     chMtxObjectInit(&_glcd_display_mtx[display]);
   }
+  flash_storage_get_display_contrast(_glcd_current_display_contrast);
   _glcd_init_display();
   chThdCreateStatic(_glcd_update_stack, sizeof(_glcd_update_stack), GLCD_UPDATE_THREAD_PRIO,
                     _glcd_update_thread, NULL);
@@ -187,8 +188,13 @@ static void _glcd_init_display(void)
    * are initialized at once
    */
   _glcd_setup_display();
-  _glcd_set_contrast(GLCD_DEFAULT_BRIGHTNESS);
   _glcd_unselect_all();
+
+  uint8_t display = 0;
+  for (display = 0; display < GLCD_DISP_MAX; display++)
+  {
+    glcd_set_contrast(display, _glcd_current_display_contrast[display]);
+  }
 }
 
 static void _glcd_draw_bitmap(glcd_display_id_t display, glcd_display_buffer_t *object)
@@ -251,9 +257,8 @@ static uint8_t _glcd_u8g2_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_
 /*
  * Shell functions
  */
-extern void glcd_set_contrast_sh(BaseSequentialStream *chp, int argc, char *argv[])
+void glcd_set_contrast_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
-  (void)argv;
   if (argc != 2)
   {
     chprintf(chp, "Usage: glcd-set-contrast (display) (contrast)\r\n");
@@ -269,6 +274,25 @@ extern void glcd_set_contrast_sh(BaseSequentialStream *chp, int argc, char *argv
   {
     chprintf(chp, "Display id out of range (%d...%d)\r\n", GLCD_DISP_1, GLCD_DISP_MAX);
   }
+}
+
+void glcd_get_contrast_sh(BaseSequentialStream *chp, int argc, char *argv[])
+{
+  (void)argv;
+  if (argc != 0)
+  {
+    chprintf(chp, "Usage: glcd-get-contrast\r\n");
+    return;
+  }
+
+  chprintf(chp, "Display    0   1   2   3   4   5   6   7   8\r\n");
+  chprintf(chp, "Contrast ");
+  uint8_t display = 0;
+  for (display = 0; display < GLCD_DISP_MAX; display++)
+  {
+    chprintf(chp, "%3d ", _glcd_current_display_contrast[display]);
+  }
+  chprintf(chp, "\r\n");
 }
 
 /*
@@ -293,6 +317,9 @@ uint8_t glcd_set_contrast(glcd_display_id_t display, uint8_t value)
   uint8_t ret = 1;
   if (display < GLCD_DISP_MAX)
   {
+    chSysLock();
+    _glcd_current_display_contrast[display] = value;
+    chSysUnlock();
     _glcd_select_display(display);
     _glcd_set_contrast((uint8_t)(value));
     _glcd_unselect_display(display);
@@ -300,6 +327,18 @@ uint8_t glcd_set_contrast(glcd_display_id_t display, uint8_t value)
   else
   {
     ret = 0;
+  }
+  return ret;
+}
+
+uint8_t glcd_get_contrast(glcd_display_id_t display)
+{
+  uint8_t ret = 0;
+  if (display < GLCD_DISP_MAX)
+  {
+    chSysLock();
+    ret = _glcd_current_display_contrast[display];
+    chSysUnlock();
   }
   return ret;
 }

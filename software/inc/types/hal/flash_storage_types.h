@@ -19,6 +19,7 @@ typedef struct
   uint32_t version;
   uint32_t initial_layer_idx;
   uint32_t first_layer_idx;
+  uint8_t display_contrast[ANYKEY_NUMBER_OF_KEYS];
 } flash_storage_header_t;
 
 typedef struct
