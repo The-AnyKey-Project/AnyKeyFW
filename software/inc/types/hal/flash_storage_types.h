@@ -35,19 +35,16 @@ typedef struct
   {
     uint8_t length;
     anykey_action_key_t act_1;
-    anykey_action_key_t act_2;
   } kp_1;
   struct
   {
     uint8_t length;
     anykey_action_key_t act_1;
-    anykey_action_key_t act_2;
   } kp_2;
   struct
   {
     uint8_t length;
     anykey_action_key_t act_1;
-    anykey_action_key_t act_2;
   } kp_3;
   struct
   {

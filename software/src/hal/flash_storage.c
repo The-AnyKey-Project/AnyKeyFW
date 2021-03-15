@@ -43,7 +43,7 @@ static uint8_t *_flash_storage_area = NULL;
 static const flash_storage_default_layer_t _flash_storage_default_layer = {
     .flash_header =
         {
-            .crc = 0xE98B354C,
+            .crc = 0x31D6D761,
             .version = FLASH_STORAGE_HEADER_VERSION,
             .initial_layer_idx = offsetof(flash_storage_default_layer_t, layer_header),
             .first_layer_idx = offsetof(flash_storage_default_layer_t, layer_header),
@@ -105,23 +105,18 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
         },
     .kp_1 =
         {
-            .length = 2 * sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x00)},  // ctrl
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x06)},  // ctrl + c
-
+            .length = sizeof(anykey_action_key_t),
+            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x06)},  // ctrl + c
         },
     .kp_2 =
         {
-            .length = 2 * sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x00)},  // ctrl
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x1B)},  // ctrl + x
-
+            .length = sizeof(anykey_action_key_t),
+            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x1B)},  // ctrl + x
         },
     .kp_3 =
         {
-            .length = 2 * sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x00)},  // ctrl
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x19)},  // ctrl + v
+            .length = sizeof(anykey_action_key_t),
+            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x19)},  // ctrl + v
         },
     .kp_4 =
         {
@@ -145,7 +140,7 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_PRESS,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0x0223)},  // browser
+                                                   USB_HID_REPORT_ID_CONSUMER, 0x0196)},  // browser
         },
     .kp_8 =
         {
@@ -164,7 +159,7 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
             .length = 2 * sizeof(anykey_action_key_t),
             .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x01,
                                                 0x06)},  // release c
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x00,
+            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x00,
                                                 0x00)},  // release all
         },
     .kr_2 =
@@ -172,7 +167,7 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
             .length = 2 * sizeof(anykey_action_key_t),
             .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x01,
                                                 0x1B)},  // release x
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x00,
+            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x00,
                                                 0x00)},  // release all
         },
     .kr_3 =
@@ -180,7 +175,7 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
             .length = 2 * sizeof(anykey_action_key_t),
             .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x01,
                                                 0x19)},  // release v
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x00,
+            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x00,
                                                 0x00)},  // release all
         },
     .kr_4 =

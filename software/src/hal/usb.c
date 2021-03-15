@@ -1151,15 +1151,15 @@ void usb_hid_kbd_send_key(uint8_t mods, uint8_t key)
   _usb_hid_kbd_report_prepare->mods = mods;
   _usb_hid_kbd_report_prepare->keys[_usb_hid_report_payload_idx] = key;
   _usb_hid_report_payload_idx++;
-  //  if (_usb_hid_report_payload_idx == USB_HID_KBD_REPORT_KEYS)
+  if (_usb_hid_report_payload_idx == USB_HID_KBD_REPORT_KEYS)
   {
     usb_hid_kbd_flush();
   }
-  //  else
-  //  {
-  //    chVTSet(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_TIMEOUT_MS),
-  //            _usb_hid_kbd_report_timer_cb, (void *)FALSE);
-  //  }
+  else
+  {
+    chVTSet(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_TIMEOUT_MS),
+            _usb_hid_kbd_report_timer_cb, (void *)FALSE);
+  }
 }
 
 void usb_hid_kbdext_send_key(usb_hid_report_id_t report_id, uint16_t keyext)

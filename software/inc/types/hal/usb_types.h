@@ -46,12 +46,12 @@ typedef enum
   USB_NUM_OUT_EPS
 } usb_ep_out_state_id_t;
 
-typedef union
+typedef struct
 {
   uint8_t mods;
   uint8_t reserved;
   uint8_t keys[USB_HID_KBD_REPORT_KEYS];
-} __attribute__((packed)) usb_hid_kbd_report_t;
+} usb_hid_kbd_report_t;
 
 typedef enum
 {
@@ -63,7 +63,7 @@ typedef struct
 {
   usb_hid_report_id_t report_id;
   uint16_t key;
-} __attribute__((packed)) usb_hid_kbdext_report_t;
+} usb_hid_kbdext_report_t;
 
 #define USB_CALLBACK_STUB(fname)          \
   void fname(USBDriver *usbp, usbep_t ep) \
