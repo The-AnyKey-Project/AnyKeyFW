@@ -47,6 +47,7 @@ static void _anykey_init_module(void);
 static anykey_layer_t *_anykey_get_layer_by_name(char *search_name);
 static void _anykey_set_layer(anykey_layer_t *layer);
 static void _anykey_handle_action(anykey_action_list_t *action_list);
+static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t *action_list);
 
 /*
  * Static variables
@@ -335,7 +336,7 @@ static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t
  * Shell functions
  */
 
-void anykey_show_actions(BaseSequentialStream *chp, int argc, char *argv[])
+void anykey_show_actions_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
   if (argc != 1)
   {

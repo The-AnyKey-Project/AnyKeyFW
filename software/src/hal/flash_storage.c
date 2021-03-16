@@ -34,6 +34,7 @@
 static void _flash_storage_init_hal(void);
 static void _flash_storage_init_module(void);
 static void _flash_storage_write_default_config(void);
+static uint8_t _flash_storage_verify_config(uint8_t *config, uint32_t size);
 static uint32_t _flash_storage_get_crc(void);
 
 /*
@@ -43,7 +44,7 @@ static uint8_t *_flash_storage_area = NULL;
 static const flash_storage_default_layer_t _flash_storage_default_layer = {
     .flash_header =
         {
-            .crc = 0x2ED6B6EE,
+            .crc = 0x7608390D,
             .version = FLASH_STORAGE_HEADER_VERSION,
             .initial_layer_idx = offsetof(flash_storage_default_layer_t, layer_header),
             .first_layer_idx = offsetof(flash_storage_default_layer_t, layer_header),
@@ -111,102 +112,89 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
     .kp_1 =
         {
             .length = sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x06)},  // ctrl + c
+            .act_1 = FLASH_STORAGE_KEY_PRESS(0x01, 0x06),  // ctrl + c
         },
     .kp_2 =
         {
             .length = sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x1B)},  // ctrl + x
+            .act_1 = FLASH_STORAGE_KEY_PRESS(0x01, 0x1B),  // ctrl + x
         },
     .kp_3 =
         {
             .length = sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x01, 0x19)},  // ctrl + v
+            .act_1 = FLASH_STORAGE_KEY_PRESS(0x01, 0x19),  // ctrl + v
         },
     .kp_4 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_PRESS,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0xE2)},  // vol mute
+            .act_1 = FLASH_STORAGE_KEYEXT_PRESS(USB_HID_REPORT_ID_CONSUMER, 0xE2),  // vol mute
         },
     .kp_5 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_PRESS,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0xEA)},  // vol -
+            .act_1 = FLASH_STORAGE_KEYEXT_PRESS(USB_HID_REPORT_ID_CONSUMER, 0xEA),  // vol -
         },
     .kp_6 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_PRESS,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0xE9)},  // vol +
+            .act_1 = FLASH_STORAGE_KEYEXT_PRESS(USB_HID_REPORT_ID_CONSUMER, 0xE9),  // vol +
         },
     .kp_7 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_PRESS,
-                                                   USB_HID_REPORT_ID_CONSUMER, 0x0196)},  // browser
+            .act_1 = FLASH_STORAGE_KEYEXT_PRESS(USB_HID_REPORT_ID_CONSUMER, 0x0196),  // browser
         },
     .kp_8 =
         {
             .length = sizeof(anykey_action_contrast_t),
-            .act_1 = {FLASH_STORAGE_CONTRAST_CONTENT(ANYKEY_ACTION_ADJUST_CONTRAST,
-                                                     -10)},  // dec contrast
+            .act_1 = FLASH_STORAGE_CONTRAST_PRESS(-10),  // dec contrast
         },
     .kp_9 =
         {
             .length = sizeof(anykey_action_contrast_t),
-            .act_1 = {FLASH_STORAGE_CONTRAST_CONTENT(ANYKEY_ACTION_ADJUST_CONTRAST,
-                                                     10)},  // inc contrast
+            .act_1 = FLASH_STORAGE_CONTRAST_PRESS(10),  // inc contrast
         },
     .kr_1 =
         {
             .length = 2 * sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x01,
-                                                0x06)},  // release c
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x00,
-                                                0x00)},  // release all
+            .act_1 = FLASH_STORAGE_KEY_RELEASE(0x01, 0x06),  // release c
+            .act_2 = FLASH_STORAGE_KEY_PRESS(0x00, 0x00),    // release all
         },
     .kr_2 =
         {
             .length = 2 * sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x01,
-                                                0x1B)},  // release x
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x00,
-                                                0x00)},  // release all
+            .act_1 = FLASH_STORAGE_KEY_RELEASE(0x01, 0x1B),  // release x
+            .act_2 = FLASH_STORAGE_KEY_PRESS(0x00, 0x00),    // release all
         },
     .kr_3 =
         {
             .length = 2 * sizeof(anykey_action_key_t),
-            .act_1 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, 0x01,
-                                                0x19)},  // release v
-            .act_2 = {FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, 0x00,
-                                                0x00)},  // release all
+            .act_1 = FLASH_STORAGE_KEY_RELEASE(0x01, 0x19),  // release v
+            .act_2 = FLASH_STORAGE_KEY_PRESS(0x00, 0x00),    // release all
         },
     .kr_4 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(
-                ANYKEY_ACTION_KEYEXT_RELEASE, USB_HID_REPORT_ID_CONSUMER, 0xE2)},  // release vol 0
+            .act_1 = FLASH_STORAGE_KEYEXT_RELEASE(USB_HID_REPORT_ID_CONSUMER,
+                                                  0xE2),  // release vol 0
         },
     .kr_5 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(
-                ANYKEY_ACTION_KEYEXT_RELEASE, USB_HID_REPORT_ID_CONSUMER, 0xEA)},  // release vol -
+            .act_1 = FLASH_STORAGE_KEYEXT_RELEASE(USB_HID_REPORT_ID_CONSUMER,
+                                                  0xEA),  // release vol -
         },
     .kr_6 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(
-                ANYKEY_ACTION_KEYEXT_RELEASE, USB_HID_REPORT_ID_CONSUMER, 0xE9)},  // release vol +
+            .act_1 = FLASH_STORAGE_KEYEXT_RELEASE(USB_HID_REPORT_ID_CONSUMER,
+                                                  0xE9),  // release vol +
         },
     .kr_7 =
         {
             .length = sizeof(anykey_action_keyext_t),
-            .act_1 = {FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_RELEASE,
-                                                   USB_HID_REPORT_ID_CONSUMER,
-                                                   0x0223)},  // release browser
+            .act_1 = FLASH_STORAGE_KEYEXT_RELEASE(USB_HID_REPORT_ID_CONSUMER,
+                                                  0x0196),  // release browser
         },
 };
 /*
@@ -245,6 +233,17 @@ static void _flash_storage_write_default_config(void)
 {
   flash_storage_write_config(0, sizeof(flash_storage_default_layer_t),
                              (uint8_t *)&_flash_storage_default_layer);
+}
+
+static uint8_t _flash_storage_verify_config(uint8_t *config, uint32_t size)
+{
+  uint32_t i = 0;
+  for (i = 0; i < size; i++)
+  {
+    if (config[i] != _flash_storage_area[i]) return 0;
+  }
+
+  return 1;
 }
 
 static uint32_t _flash_storage_get_crc(void)
@@ -307,7 +306,16 @@ void flash_storage_write_default_sh(BaseSequentialStream *chp, int argc, char *a
   }
   chprintf(chp, "Writing default config to flash...");
   _flash_storage_write_default_config();
-  chprintf(chp, "done!\r\n");
+  chprintf(chp, "verify...");
+  if (_flash_storage_verify_config((uint8_t *)&_flash_storage_default_layer,
+                                   sizeof(_flash_storage_default_layer)))
+  {
+    chprintf(chp, "done!\r\n");
+  }
+  else
+  {
+    chprintf(chp, "abort!\r\n");
+  }
 }
 
 /*

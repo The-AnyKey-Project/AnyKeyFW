@@ -36,86 +36,86 @@ typedef struct
   {
     uint8_t length;
     anykey_action_key_t act_1;
-  } kp_1;
+  } __attribute__((packed)) kp_1;
   struct
   {
     uint8_t length;
     anykey_action_key_t act_1;
-  } kp_2;
+  } __attribute__((packed)) kp_2;
   struct
   {
     uint8_t length;
     anykey_action_key_t act_1;
-  } kp_3;
+  } __attribute__((packed)) kp_3;
   struct
   {
     uint8_t length;
     anykey_action_keyext_t act_1;
-  } kp_4;
+  } __attribute__((packed)) kp_4;
   struct
   {
     uint8_t length;
     anykey_action_keyext_t act_1;
-  } kp_5;
+  } __attribute__((packed)) kp_5;
   struct
   {
     uint8_t length;
     anykey_action_keyext_t act_1;
-  } kp_6;
+  } __attribute__((packed)) kp_6;
   struct
   {
     uint8_t length;
     anykey_action_keyext_t act_1;
-  } kp_7;
+  } __attribute__((packed)) kp_7;
   struct
   {
     uint8_t length;
     anykey_action_contrast_t act_1;
-  } kp_8;
+  } __attribute__((packed)) kp_8;
   struct
   {
     uint8_t length;
     anykey_action_contrast_t act_1;
-  } kp_9;
+  } __attribute__((packed)) kp_9;
   struct
   {
     uint8_t length;
     anykey_action_key_t act_1;
     anykey_action_key_t act_2;
-  } kr_1;
+  } __attribute__((packed)) kr_1;
   struct
   {
     uint8_t length;
     anykey_action_key_t act_1;
     anykey_action_key_t act_2;
-  } kr_2;
+  } __attribute__((packed)) kr_2;
   struct
   {
     uint8_t length;
     anykey_action_key_t act_1;
     anykey_action_key_t act_2;
-  } kr_3;
+  } __attribute__((packed)) kr_3;
   struct
   {
     uint8_t length;
     anykey_action_keyext_t act_1;
-  } kr_4;
+  } __attribute__((packed)) kr_4;
   struct
   {
     uint8_t length;
     anykey_action_keyext_t act_1;
-  } kr_5;
+  } __attribute__((packed)) kr_5;
   struct
   {
     uint8_t length;
     anykey_action_keyext_t act_1;
-  } kr_6;
+  } __attribute__((packed)) kr_6;
   struct
   {
     uint8_t length;
     anykey_action_keyext_t act_1;
-  } kr_7;
-} flash_storage_default_layer_t;
+  } __attribute__((packed)) kr_7;
+} __attribute__((packed)) flash_storage_default_layer_t;
 
 #define FLASH_STORAGE_DB_CONTENT(x)                                                        \
   .header = {.x_size = FLASH_STORAGE_DEFCONFIG_DB_X_SIZE,                                  \
@@ -123,8 +123,26 @@ typedef struct
              .x_offset = ((GLCD_DISPLAY_WIDTH - FLASH_STORAGE_DEFCONFIG_DB_X_SIZE) / 2),   \
              .y_offset = ((GLCD_DISPLAY_HEIGHT - FLASH_STORAGE_DEFCONFIG_DB_Y_SIZE) / 2)}, \
   .content = {x}
-#define FLASH_STORAGE_KEY_CONTENT(x, y, z)    .action = x, .mods = y, .key = z
-#define FLASH_STORAGE_KEYEXT_CONTENT(x, y, z) .action = x, .report_id = y, .key = z
-#define FLASH_STORAGE_CONTRAST_CONTENT(x, y)  .action = x, .adjust = y
+#define FLASH_STORAGE_KEY_CONTENT(x, y, z) \
+  {                                        \
+    .action = x, .mods = y, .key = z       \
+  }
+#define FLASH_STORAGE_KEYEXT_CONTENT(x, y, z) \
+  {                                           \
+    .action = x, .report_id = y, .key = z     \
+  }
+#define FLASH_STORAGE_CONTRAST_CONTENT(x, y) \
+  {                                          \
+    .action = x, .adjust = y                 \
+  }
+
+#define FLASH_STORAGE_KEY_PRESS(y, z)   FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_PRESS, y, z)
+#define FLASH_STORAGE_KEY_RELEASE(y, z) FLASH_STORAGE_KEY_CONTENT(ANYKEY_ACTION_KEY_RELEASE, y, z)
+#define FLASH_STORAGE_KEYEXT_PRESS(y, z) \
+  FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_PRESS, y, z)
+#define FLASH_STORAGE_KEYEXT_RELEASE(y, z) \
+  FLASH_STORAGE_KEYEXT_CONTENT(ANYKEY_ACTION_KEYEXT_RELEASE, y, z)
+#define FLASH_STORAGE_CONTRAST_PRESS(y) \
+  FLASH_STORAGE_CONTRAST_CONTENT(ANYKEY_ACTION_ADJUST_CONTRAST, y)
 
 #endif /* INC_TYPES_HAL_FLASH_STORAGE_TYPES_H_ */

@@ -19,7 +19,7 @@ typedef enum
   ANYKEY_ACTION_NEXT_LAYER,
   ANYKEY_ACTION_PREV_LAYER,
   ANYKEY_ACTION_ADJUST_CONTRAST
-} anykey_action_t;
+} __attribute__((packed)) anykey_action_t;
 
 typedef struct
 {
