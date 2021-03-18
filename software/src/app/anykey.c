@@ -44,6 +44,7 @@ static_assert(ANYKEY_NUMBER_OF_KEYS == (GLCD_DISP_MAX),
  */
 static void _anykey_init_hal(void);
 static void _anykey_init_module(void);
+static void _anykey_fill_response_buffer(uint8_t *buffer, uint16_t already_filled, uint16_t size);
 static anykey_layer_t *_anykey_get_layer_by_name(char *search_name);
 static void _anykey_set_layer(anykey_layer_t *layer);
 static void _anykey_handle_action(anykey_action_list_t *action_list);
@@ -115,10 +116,68 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
   {
     uint8_t input_buffer[USB_HID_RAW_EPSIZE];
     size_t size = usb_hid_raw_receive(input_buffer, USB_HID_RAW_EPSIZE);
+    anykey_cmd_req_t *req = (anykey_cmd_req_t *)input_buffer;
+    anykey_cmd_resp_t *resp = (anykey_cmd_resp_t *)input_buffer;
     if (size)
     {
-      // TODO do something
-      // usb_hid_raw_send(input_buffer, size);
+      switch (req->raw.cmd)
+      {
+        case ANYKEY_CMD_SET_LAYER:
+          _anykey_set_layer(flash_storage_get_layer_by_name((char *)req->set_layer.name));
+          break;
+        case ANYKEY_CMD_GET_LAYER:
+          resp->get_layer.name[0] = '\0';
+          if (_anykey_current_layer)
+          {
+            char *name = flash_storage_get_pointer_from_offset(_anykey_current_layer->name_idx);
+            if (name)
+            {
+              strcpy((char *)resp->get_layer.name, (char *)name);
+            }
+          }
+          _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_layer_resp_t),
+                                       USB_HID_RAW_EPSIZE);
+          usb_hid_raw_send((uint8_t *)resp, USB_HID_RAW_EPSIZE);
+          break;
+        case ANYKEY_CMD_SET_CONTRAST:
+        {
+          uint8_t i = 0;
+          for (i = 0; i < GLCD_DISP_MAX; i++)
+          {
+            if (req->set_contrast.display == i || req->set_contrast.display == GLCD_DISP_MAX)
+            {
+              glcd_set_contrast(i, req->set_contrast.contrast[i]);
+            }
+          }
+          break;
+        }
+        case ANYKEY_CMD_GET_CONTRAST:
+        {
+          uint8_t i = 0;
+          for (i = 0; i < GLCD_DISP_MAX; i++)
+          {
+            resp->get_contrast.contrast[i] =
+                (req->get_contrast.display == i || req->get_contrast.display == GLCD_DISP_MAX)
+                    ? glcd_get_contrast(i)
+                    : 0;
+          }
+          _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_contrast_resp_t),
+                                       USB_HID_RAW_EPSIZE);
+          usb_hid_raw_send((uint8_t *)resp, USB_HID_RAW_EPSIZE);
+          break;
+        }
+        case ANYKEY_CMD_GET_FLASH_INFO:
+          resp->get_flash_info.flash_size = FLASH_STORAGE_SIZE;
+          resp->get_flash_info.sector_size = STM32_FLASH_SECTOR_SIZE;
+          _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_flash_info_resp_t),
+                                       USB_HID_RAW_EPSIZE);
+          usb_hid_raw_send((uint8_t *)resp, USB_HID_RAW_EPSIZE);
+          break;
+        case ANYKEY_CMD_SET_FALSH:
+        case ANYKEY_CMD_GET_FALSH:
+        default:
+          break;
+      }
     }
   }
 }
@@ -144,6 +203,11 @@ static void _anykey_init_module(void)
                     _anykey_key_thread, NULL);
   chThdCreateStatic(_anykey_cmd_stack, sizeof(_anykey_cmd_stack), ANYKEY_CMD_THREAD_PRIO,
                     _anykey_cmd_thread, NULL);
+}
+
+static void _anykey_fill_response_buffer(uint8_t *buffer, uint16_t already_filled, uint16_t size)
+{
+  memset(&buffer[already_filled], 0, size - already_filled);
 }
 
 static anykey_layer_t *_anykey_get_layer_by_name(char *search_name)
