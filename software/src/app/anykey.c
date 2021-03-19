@@ -168,12 +168,15 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
           break;
         }
         case ANYKEY_CMD_GET_FLASH_INFO:
+        {
+          const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
           resp->get_flash_info.flash_size = FLASH_STORAGE_SIZE;
-          resp->get_flash_info.sector_size = STM32_FLASH_SECTOR_SIZE;
+          resp->get_flash_info.sector_size = desc->sectors_size;
           _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_flash_info_resp_t),
                                        USB_HID_RAW_EPSIZE);
           send_resp = 1;
           break;
+        }
         case ANYKEY_CMD_SET_FALSH:
         {
           static uint8_t _anykey_flash_sector_buffer[STM32_FLASH_SECTOR_SIZE];
@@ -197,11 +200,12 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
         }
         case ANYKEY_CMD_GET_FALSH:
         {
+          const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
           uint16_t block_size = sizeof(resp->get_flash.buffer);
-          uint16_t block_cnt_max = (STM32_FLASH_SECTOR_SIZE - 1) / block_size + 1;
-          uint16_t residual = STM32_FLASH_SECTOR_SIZE;
-          uint8_t *sector = (uint8_t *)flash_storage_get_pointer_from_offset(
-              req->get_flash.sector * STM32_FLASH_SECTOR_SIZE);
+          uint16_t block_cnt_max = (desc->sectors_size - 1) / block_size + 1;
+          uint16_t residual = desc->sectors_size;
+          uint8_t *sector = (uint8_t *)flash_storage_get_pointer_from_offset(req->get_flash.sector *
+                                                                             desc->sectors_size);
           for (resp->get_flash.block_cnt = 0; resp->get_flash.block_cnt < block_cnt_max;
                resp->get_flash.block_cnt++)
           {

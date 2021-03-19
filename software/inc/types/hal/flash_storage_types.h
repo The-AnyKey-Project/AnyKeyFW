@@ -25,13 +25,20 @@ typedef struct
 typedef struct
 {
   flash_storage_header_t flash_header;
-  anykey_layer_t layer_header;
-  uint8_t name[FLASH_STORAGE_DEFCONFIG_NAME_LENGTH];
+  anykey_layer_t l1_header;
+  anykey_layer_t l2_header;
+  uint8_t l1_name[FLASH_STORAGE_DEFCONFIG_NAME_LENGTH];
+  uint8_t l2_name[FLASH_STORAGE_DEFCONFIG_NAME_LENGTH];
   struct
   {
     glcd_display_header_t header;
     uint8_t content[FLASH_STORAGE_DEFCONFIG_DB_LENGTH];
   } db[ANYKEY_NUMBER_OF_KEYS];
+  struct
+  {
+    uint8_t length;
+    anykey_action_key_t act_1;
+  } __attribute__((packed)) kp_0;
   struct
   {
     uint8_t length;
@@ -45,7 +52,7 @@ typedef struct
   struct
   {
     uint8_t length;
-    anykey_action_key_t act_1;
+    anykey_action_keyext_t act_1;
   } __attribute__((packed)) kp_3;
   struct
   {
@@ -65,7 +72,7 @@ typedef struct
   struct
   {
     uint8_t length;
-    anykey_action_keyext_t act_1;
+    anykey_action_contrast_t act_1;
   } __attribute__((packed)) kp_7;
   struct
   {
@@ -75,8 +82,9 @@ typedef struct
   struct
   {
     uint8_t length;
-    anykey_action_contrast_t act_1;
-  } __attribute__((packed)) kp_9;
+    anykey_action_key_t act_1;
+    anykey_action_key_t act_2;
+  } __attribute__((packed)) kr_0;
   struct
   {
     uint8_t length;
@@ -92,8 +100,7 @@ typedef struct
   struct
   {
     uint8_t length;
-    anykey_action_key_t act_1;
-    anykey_action_key_t act_2;
+    anykey_action_keyext_t act_1;
   } __attribute__((packed)) kr_3;
   struct
   {
@@ -110,11 +117,6 @@ typedef struct
     uint8_t length;
     anykey_action_keyext_t act_1;
   } __attribute__((packed)) kr_6;
-  struct
-  {
-    uint8_t length;
-    anykey_action_keyext_t act_1;
-  } __attribute__((packed)) kr_7;
 } __attribute__((packed)) flash_storage_default_layer_t;
 
 #define FLASH_STORAGE_DB_CONTENT(x)                                                        \

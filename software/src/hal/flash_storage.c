@@ -45,21 +45,21 @@ static uint8_t *_flash_storage_area = NULL;
 static const flash_storage_default_layer_t _flash_storage_default_layer = {
     .flash_header =
         {
-            .crc = 0x7608390D,
+            .crc = 0xA124C0A3,
             .version = FLASH_STORAGE_HEADER_VERSION,
-            .initial_layer_idx = offsetof(flash_storage_default_layer_t, layer_header),
-            .first_layer_idx = offsetof(flash_storage_default_layer_t, layer_header),
+            .initial_layer_idx = offsetof(flash_storage_default_layer_t, l1_header),
+            .first_layer_idx = offsetof(flash_storage_default_layer_t, l1_header),
             .display_contrast = {GLCD_DEFAULT_BRIGHTNESS, GLCD_DEFAULT_BRIGHTNESS,
                                  GLCD_DEFAULT_BRIGHTNESS, GLCD_DEFAULT_BRIGHTNESS,
                                  GLCD_DEFAULT_BRIGHTNESS, GLCD_DEFAULT_BRIGHTNESS,
                                  GLCD_DEFAULT_BRIGHTNESS, GLCD_DEFAULT_BRIGHTNESS,
                                  GLCD_DEFAULT_BRIGHTNESS},
         },
-    .layer_header =
+    .l1_header =
         {
-            .next_idx = 0,
+            .next_idx = offsetof(flash_storage_default_layer_t, l2_header),
             .prev_idx = 0,
-            .name_idx = offsetof(flash_storage_default_layer_t, name),
+            .name_idx = offsetof(flash_storage_default_layer_t, l1_name),
             .display_idx =
                 {
                     offsetof(flash_storage_default_layer_t, db[0]),
@@ -74,6 +74,7 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
                 },
             .key_action_press_idx =
                 {
+                    offsetof(flash_storage_default_layer_t, kp_0),
                     offsetof(flash_storage_default_layer_t, kp_1),
                     offsetof(flash_storage_default_layer_t, kp_2),
                     offsetof(flash_storage_default_layer_t, kp_3),
@@ -82,22 +83,64 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
                     offsetof(flash_storage_default_layer_t, kp_6),
                     offsetof(flash_storage_default_layer_t, kp_7),
                     offsetof(flash_storage_default_layer_t, kp_8),
-                    offsetof(flash_storage_default_layer_t, kp_9),
                 },
             .key_action_release_idx =
                 {
+                    offsetof(flash_storage_default_layer_t, kr_0),
                     offsetof(flash_storage_default_layer_t, kr_1),
                     offsetof(flash_storage_default_layer_t, kr_2),
                     offsetof(flash_storage_default_layer_t, kr_3),
                     offsetof(flash_storage_default_layer_t, kr_4),
                     offsetof(flash_storage_default_layer_t, kr_5),
                     offsetof(flash_storage_default_layer_t, kr_6),
-                    offsetof(flash_storage_default_layer_t, kr_7),
                     0,
                     0,
                 },
         },
-    .name = FLASH_STORAGE_DEFCONFIG_NAME,
+    .l2_header =
+        {
+            .next_idx = 0,
+            .prev_idx = offsetof(flash_storage_default_layer_t, l1_header),
+            .name_idx = offsetof(flash_storage_default_layer_t, l2_name),
+            .display_idx =
+                {
+                    offsetof(flash_storage_default_layer_t, db[8]),
+                    offsetof(flash_storage_default_layer_t, db[7]),
+                    offsetof(flash_storage_default_layer_t, db[6]),
+                    offsetof(flash_storage_default_layer_t, db[5]),
+                    offsetof(flash_storage_default_layer_t, db[4]),
+                    offsetof(flash_storage_default_layer_t, db[3]),
+                    offsetof(flash_storage_default_layer_t, db[2]),
+                    offsetof(flash_storage_default_layer_t, db[1]),
+                    offsetof(flash_storage_default_layer_t, db[0]),
+                },
+            .key_action_press_idx =
+                {
+                    offsetof(flash_storage_default_layer_t, kp_8),
+                    offsetof(flash_storage_default_layer_t, kp_7),
+                    offsetof(flash_storage_default_layer_t, kp_6),
+                    offsetof(flash_storage_default_layer_t, kp_5),
+                    offsetof(flash_storage_default_layer_t, kp_4),
+                    offsetof(flash_storage_default_layer_t, kp_3),
+                    offsetof(flash_storage_default_layer_t, kp_2),
+                    offsetof(flash_storage_default_layer_t, kp_1),
+                    offsetof(flash_storage_default_layer_t, kp_0),
+                },
+            .key_action_release_idx =
+                {
+                    0,
+                    0,
+                    offsetof(flash_storage_default_layer_t, kr_6),
+                    offsetof(flash_storage_default_layer_t, kr_5),
+                    offsetof(flash_storage_default_layer_t, kr_4),
+                    offsetof(flash_storage_default_layer_t, kr_3),
+                    offsetof(flash_storage_default_layer_t, kr_2),
+                    offsetof(flash_storage_default_layer_t, kr_1),
+                    offsetof(flash_storage_default_layer_t, kr_0),
+                },
+        },
+    .l1_name = FLASH_STORAGE_DEFCONFIG_L1_NAME,
+    .l2_name = FLASH_STORAGE_DEFCONFIG_L2_NAME,
     .db =
         {
             {FLASH_STORAGE_DB_CONTENT(FLASH_STORAGE_DEFCONFIG_IMAGE_COPY)},
@@ -110,88 +153,88 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
             {FLASH_STORAGE_DB_CONTENT(FLASH_STORAGE_DEFCONFIG_IMAGE_CONTRAST_DEC)},
             {FLASH_STORAGE_DB_CONTENT(FLASH_STORAGE_DEFCONFIG_IMAGE_CONTRAST_INC)},
         },
-    .kp_1 =
+    .kp_0 =
         {
             .length = sizeof(anykey_action_key_t),
             .act_1 = FLASH_STORAGE_KEY_PRESS(0x01, 0x06),  // ctrl + c
         },
-    .kp_2 =
+    .kp_1 =
         {
             .length = sizeof(anykey_action_key_t),
             .act_1 = FLASH_STORAGE_KEY_PRESS(0x01, 0x1B),  // ctrl + x
         },
-    .kp_3 =
+    .kp_2 =
         {
             .length = sizeof(anykey_action_key_t),
             .act_1 = FLASH_STORAGE_KEY_PRESS(0x01, 0x19),  // ctrl + v
         },
-    .kp_4 =
+    .kp_3 =
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = FLASH_STORAGE_KEYEXT_PRESS(USB_HID_REPORT_ID_CONSUMER, 0xE2),  // vol mute
         },
-    .kp_5 =
+    .kp_4 =
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = FLASH_STORAGE_KEYEXT_PRESS(USB_HID_REPORT_ID_CONSUMER, 0xEA),  // vol -
         },
-    .kp_6 =
+    .kp_5 =
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = FLASH_STORAGE_KEYEXT_PRESS(USB_HID_REPORT_ID_CONSUMER, 0xE9),  // vol +
         },
-    .kp_7 =
+    .kp_6 =
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = FLASH_STORAGE_KEYEXT_PRESS(USB_HID_REPORT_ID_CONSUMER, 0x0196),  // browser
         },
-    .kp_8 =
+    .kp_7 =
         {
             .length = sizeof(anykey_action_contrast_t),
             .act_1 = FLASH_STORAGE_CONTRAST_PRESS(-10),  // dec contrast
         },
-    .kp_9 =
+    .kp_8 =
         {
             .length = sizeof(anykey_action_contrast_t),
             .act_1 = FLASH_STORAGE_CONTRAST_PRESS(10),  // inc contrast
         },
-    .kr_1 =
+    .kr_0 =
         {
             .length = 2 * sizeof(anykey_action_key_t),
             .act_1 = FLASH_STORAGE_KEY_RELEASE(0x01, 0x06),  // release c
             .act_2 = FLASH_STORAGE_KEY_PRESS(0x00, 0x00),    // release all
         },
-    .kr_2 =
+    .kr_1 =
         {
             .length = 2 * sizeof(anykey_action_key_t),
             .act_1 = FLASH_STORAGE_KEY_RELEASE(0x01, 0x1B),  // release x
             .act_2 = FLASH_STORAGE_KEY_PRESS(0x00, 0x00),    // release all
         },
-    .kr_3 =
+    .kr_2 =
         {
             .length = 2 * sizeof(anykey_action_key_t),
             .act_1 = FLASH_STORAGE_KEY_RELEASE(0x01, 0x19),  // release v
             .act_2 = FLASH_STORAGE_KEY_PRESS(0x00, 0x00),    // release all
         },
-    .kr_4 =
+    .kr_3 =
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = FLASH_STORAGE_KEYEXT_RELEASE(USB_HID_REPORT_ID_CONSUMER,
                                                   0xE2),  // release vol 0
         },
-    .kr_5 =
+    .kr_4 =
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = FLASH_STORAGE_KEYEXT_RELEASE(USB_HID_REPORT_ID_CONSUMER,
                                                   0xEA),  // release vol -
         },
-    .kr_6 =
+    .kr_5 =
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = FLASH_STORAGE_KEYEXT_RELEASE(USB_HID_REPORT_ID_CONSUMER,
                                                   0xE9),  // release vol +
         },
-    .kr_7 =
+    .kr_6 =
         {
             .length = sizeof(anykey_action_keyext_t),
             .act_1 = FLASH_STORAGE_KEYEXT_RELEASE(USB_HID_REPORT_ID_CONSUMER,
@@ -235,6 +278,9 @@ static void _flash_storage_write_default_config(void)
   uint16_t start_sector = _flash_storage_get_first_sector();
   uint16_t i = 0;
 
+  const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
+  flash_offset_t flash_offset = (flash_offset_t)_flash_storage_area - (flash_offset_t)desc->address;
+
   for (i = start_sector; i <= FLASH_STORAGE_LAST_SECTOR; i++)
   {
     uint32_t wait_time = 0;
@@ -243,7 +289,7 @@ static void _flash_storage_write_default_config(void)
     chThdSleep(TIME_MS2I(wait_time));
   }
 
-  efl_lld_program(&FLASH_STORAGE_DRIVER_HANDLE, 0, sizeof(flash_storage_default_layer_t),
+  efl_lld_program(&FLASH_STORAGE_DRIVER_HANDLE, flash_offset, sizeof(flash_storage_default_layer_t),
                   (const uint8_t *)&_flash_storage_default_layer);
 }
 
