@@ -87,7 +87,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_glcd_update_thread, arg)
       for (display = 0; display < GLCD_DISP_MAX; display++)
       {
         _glcd_draw_bitmap(display,
-                          flash_storage_get_pointer_from_offset(_glcd_display_buffers[display]));
+                          flash_storage_get_pointer_from_idx(_glcd_display_buffers[display]));
       }
       chSysLock();
       _glcd_display_buffers_dirty = 0;

@@ -36,6 +36,7 @@ static void _flash_storage_init_module(void);
 static void _flash_storage_write_default_config(void);
 static uint8_t _flash_storage_verify_config(uint8_t *config, uint32_t size);
 static uint32_t _flash_storage_get_crc(void);
+static uint16_t _flash_storage_get_first_sector(void);
 
 /*
  * Static variables
@@ -231,8 +232,19 @@ static void _flash_storage_init_module(void)
 
 static void _flash_storage_write_default_config(void)
 {
-  flash_storage_write_config(0, sizeof(flash_storage_default_layer_t),
-                             (uint8_t *)&_flash_storage_default_layer);
+  uint16_t start_sector = _flash_storage_get_first_sector();
+  uint16_t i = 0;
+
+  for (i = start_sector; i <= FLASH_STORAGE_LAST_SECTOR; i++)
+  {
+    uint32_t wait_time = 0;
+    efl_lld_start_erase_sector(&FLASH_STORAGE_DRIVER_HANDLE, (flash_sector_t)i);
+    efl_lld_query_erase(&FLASH_STORAGE_DRIVER_HANDLE, &wait_time);
+    chThdSleep(TIME_MS2I(wait_time));
+  }
+
+  efl_lld_program(&FLASH_STORAGE_DRIVER_HANDLE, 0, sizeof(flash_storage_default_layer_t),
+                  (const uint8_t *)&_flash_storage_default_layer);
 }
 
 static uint8_t _flash_storage_verify_config(uint8_t *config, uint32_t size)
@@ -251,6 +263,12 @@ static uint32_t _flash_storage_get_crc(void)
   crcResetI(&FLASH_STORAGE_CRC_HANDLE);
   return crcCalcI(&FLASH_STORAGE_CRC_HANDLE, FLASH_STORAGE_SIZE - sizeof(crc_t),
                   &_flash_storage_area[sizeof(crc_t)]);
+}
+
+static uint16_t _flash_storage_get_first_sector(void)
+{
+  const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
+  return FLASH_STORAGE_LAST_SECTOR - FLASH_STORAGE_SIZE / desc->sectors_size;
 }
 /*
  * Callback functions
@@ -281,9 +299,9 @@ void flash_storage_info_sh(BaseSequentialStream *chp, int argc, char *argv[])
   chprintf(chp, "CRC           0x%08x\r\n", header->crc);
   chprintf(chp, "Version         %8d\r\n", header->version);
   chprintf(chp, "Initial layer 0x%08x\r\n",
-           flash_storage_get_pointer_from_offset(header->initial_layer_idx));
+           flash_storage_get_pointer_from_idx(header->initial_layer_idx));
   chprintf(chp, "First layer   0x%08x\r\n",
-           flash_storage_get_pointer_from_offset(header->first_layer_idx));
+           flash_storage_get_pointer_from_idx(header->first_layer_idx));
   chprintf(chp, "Display    0   1   2   3   4   5   6   7   8\r\n");
   chprintf(chp, "Contrast ");
   uint8_t display = 0;
@@ -330,18 +348,23 @@ void flash_storage_init(void)
 
 void *flash_storage_get_pointer_from_offset(uint32_t offset)
 {
-  return (offset) ? (void *)&_flash_storage_area[offset] : NULL;
+  return (void *)&_flash_storage_area[offset];
+}
+
+void *flash_storage_get_pointer_from_idx(uint32_t idx)
+{
+  return (idx) ? flash_storage_get_pointer_from_offset(idx) : NULL;
 }
 
 anykey_layer_t *flash_storage_get_initial_layer(void)
 {
-  return flash_storage_get_pointer_from_offset(
+  return flash_storage_get_pointer_from_idx(
       ((flash_storage_header_t *)_flash_storage_area)->initial_layer_idx);
 }
 
 anykey_layer_t *flash_storage_get_first_layer(void)
 {
-  return flash_storage_get_pointer_from_offset(
+  return flash_storage_get_pointer_from_idx(
       ((flash_storage_header_t *)_flash_storage_area)->first_layer_idx);
 }
 
@@ -350,12 +373,12 @@ anykey_layer_t *flash_storage_get_layer_by_name(char *name)
   anykey_layer_t *layer = flash_storage_get_first_layer();
   while (layer)
   {
-    char *layer_name = flash_storage_get_pointer_from_offset(layer->name_idx);
+    char *layer_name = flash_storage_get_pointer_from_idx(layer->name_idx);
     if (strcmp((const char *)name, (const char *)layer_name) == 0)
     {
       return layer;
     }
-    layer = flash_storage_get_pointer_from_offset(layer->next_idx);
+    layer = flash_storage_get_pointer_from_idx(layer->next_idx);
   }
   return NULL;
 }
@@ -369,22 +392,15 @@ void flash_storage_get_display_contrast(uint8_t *contrast_buffer)
   }
 }
 
-void flash_storage_write_config(uint32_t offset, uint32_t size, uint8_t *buffer)
+void flash_storage_write_sector(uint8_t *buffer, uint16_t sector)
 {
-  const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
-  flash_offset_t flash_offset =
-      (flash_offset_t)_flash_storage_area - (flash_offset_t)desc->address + (flash_offset_t)offset;
+  uint16_t start_sector = _flash_storage_get_first_sector();
 
-  uint8_t i = 0;
-  uint8_t start_sector = FLASH_STORAGE_LAST_SECTOR - FLASH_STORAGE_SIZE / desc->sectors_size;
+  uint32_t wait_time = 0;
+  efl_lld_start_erase_sector(&FLASH_STORAGE_DRIVER_HANDLE, (flash_sector_t)(start_sector + sector));
+  efl_lld_query_erase(&FLASH_STORAGE_DRIVER_HANDLE, &wait_time);
+  chThdSleep(TIME_MS2I(wait_time));
 
-  for (i = start_sector; i <= FLASH_STORAGE_LAST_SECTOR; i++)
-  {
-    uint32_t wait_time = 0;
-    efl_lld_start_erase_sector(&FLASH_STORAGE_DRIVER_HANDLE, (flash_sector_t)i);
-    efl_lld_query_erase(&FLASH_STORAGE_DRIVER_HANDLE, &wait_time);
-    chThdSleep(TIME_MS2I(wait_time));
-  }
-
-  efl_lld_program(&FLASH_STORAGE_DRIVER_HANDLE, flash_offset, size, (const uint8_t *)buffer);
+  efl_lld_program(&FLASH_STORAGE_DRIVER_HANDLE, sector * STM32_FLASH_SECTOR_SIZE,
+                  STM32_FLASH_SECTOR_SIZE, (const uint8_t *)buffer);
 }

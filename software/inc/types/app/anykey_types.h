@@ -117,13 +117,13 @@ typedef struct
 typedef struct
 {
   anykey_cmd_t cmd;
-  uint32_t sector;
-  uint16_t block_size;
   struct
   {
     uint16_t block_cnt : 15;
     uint16_t final_block : 1;
   };
+  uint16_t sector;
+  uint16_t block_size;
   uint8_t buffer[USB_HID_RAW_EPSIZE - sizeof(anykey_cmd_t) - 2 * sizeof(uint16_t)];
 } __attribute__((packed)) anykey_cmd_set_flash_req_t;
 
@@ -190,7 +190,7 @@ typedef struct
     uint16_t block_cnt : 15;
     uint16_t final_block : 1;
   };
-  uint8_t buffer[USB_HID_RAW_EPSIZE - sizeof(anykey_cmd_t) - 2 * sizeof(uint16_t)];
+  uint8_t buffer[USB_HID_RAW_EPSIZE - sizeof(anykey_cmd_t) - sizeof(uint16_t)];
 } __attribute__((packed)) anykey_cmd_get_flash_resp_t;
 
 typedef union

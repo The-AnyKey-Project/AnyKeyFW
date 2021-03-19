@@ -89,11 +89,11 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
           switch (dest[sw_id])
           {
             case KEYPAD_EVENT_PRESS:
-              _anykey_handle_action(flash_storage_get_pointer_from_offset(
+              _anykey_handle_action(flash_storage_get_pointer_from_idx(
                   _anykey_current_layer->key_action_press_idx[sw_id]));
               break;
             case KEYPAD_EVENT_RELEASE:
-              _anykey_handle_action(flash_storage_get_pointer_from_offset(
+              _anykey_handle_action(flash_storage_get_pointer_from_idx(
                   _anykey_current_layer->key_action_release_idx[sw_id]));
               break;
             case KEYPAD_EVENT_NONE:
@@ -115,6 +115,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
   while (true)
   {
     uint8_t input_buffer[USB_HID_RAW_EPSIZE];
+    uint8_t send_resp = 0;
     size_t size = usb_hid_raw_receive(input_buffer, USB_HID_RAW_EPSIZE);
     anykey_cmd_req_t *req = (anykey_cmd_req_t *)input_buffer;
     anykey_cmd_resp_t *resp = (anykey_cmd_resp_t *)input_buffer;
@@ -129,7 +130,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
           resp->get_layer.name[0] = '\0';
           if (_anykey_current_layer)
           {
-            char *name = flash_storage_get_pointer_from_offset(_anykey_current_layer->name_idx);
+            char *name = flash_storage_get_pointer_from_idx(_anykey_current_layer->name_idx);
             if (name)
             {
               strcpy((char *)resp->get_layer.name, (char *)name);
@@ -137,7 +138,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
           }
           _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_layer_resp_t),
                                        USB_HID_RAW_EPSIZE);
-          usb_hid_raw_send((uint8_t *)resp, USB_HID_RAW_EPSIZE);
+          send_resp = 1;
           break;
         case ANYKEY_CMD_SET_CONTRAST:
         {
@@ -163,7 +164,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
           }
           _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_contrast_resp_t),
                                        USB_HID_RAW_EPSIZE);
-          usb_hid_raw_send((uint8_t *)resp, USB_HID_RAW_EPSIZE);
+          send_resp = 1;
           break;
         }
         case ANYKEY_CMD_GET_FLASH_INFO:
@@ -171,12 +172,55 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
           resp->get_flash_info.sector_size = STM32_FLASH_SECTOR_SIZE;
           _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_flash_info_resp_t),
                                        USB_HID_RAW_EPSIZE);
-          usb_hid_raw_send((uint8_t *)resp, USB_HID_RAW_EPSIZE);
+          send_resp = 1;
           break;
         case ANYKEY_CMD_SET_FALSH:
+        {
+          static uint8_t _anykey_flash_sector_buffer[STM32_FLASH_SECTOR_SIZE];
+          static uint16_t _anykey_flash_sector_written = 0;
+          if (req->set_flash.block_cnt == 0)
+          {
+            memset(_anykey_flash_sector_buffer, 0xff, sizeof(_anykey_flash_sector_buffer));
+            _anykey_flash_sector_written = 0;
+          }
+          memcpy(&_anykey_flash_sector_buffer[_anykey_flash_sector_written], req->set_flash.buffer,
+                 req->set_flash.block_size);
+          _anykey_flash_sector_written += req->set_flash.block_size;
+          if (req->set_flash.final_block)
+          {
+            flash_storage_write_sector(_anykey_flash_sector_buffer, req->set_flash.sector);
+          }
+          _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_set_flash_resp_t),
+                                       USB_HID_RAW_EPSIZE);
+          send_resp = 1;
+          break;
+        }
         case ANYKEY_CMD_GET_FALSH:
+        {
+          uint16_t block_size = sizeof(resp->get_flash.buffer);
+          uint16_t block_cnt_max = (STM32_FLASH_SECTOR_SIZE - 1) / block_size + 1;
+          uint16_t residual = STM32_FLASH_SECTOR_SIZE;
+          uint8_t *sector = (uint8_t *)flash_storage_get_pointer_from_offset(
+              req->get_flash.sector * STM32_FLASH_SECTOR_SIZE);
+          for (resp->get_flash.block_cnt = 0; resp->get_flash.block_cnt < block_cnt_max;
+               resp->get_flash.block_cnt++)
+          {
+            resp->get_flash.block_size = (residual > block_size) ? block_size : residual;
+            residual -= resp->get_flash.block_size;
+            resp->get_flash.final_block = (residual) ? 1 : 0;
+            memcpy(resp->get_flash.buffer, &sector[block_size * resp->get_flash.block_cnt],
+                   resp->get_flash.block_size);
+            send_resp = 1;
+          }
+
+          break;
+        }
         default:
           break;
+      }
+      if (send_resp)
+      {
+        usb_hid_raw_send((uint8_t *)resp, USB_HID_RAW_EPSIZE);
       }
     }
   }
@@ -215,12 +259,12 @@ static anykey_layer_t *_anykey_get_layer_by_name(char *search_name)
   anykey_layer_t *layer = flash_storage_get_first_layer();
   while (layer)
   {
-    uint8_t *name = flash_storage_get_pointer_from_offset(layer->name_idx);
+    uint8_t *name = flash_storage_get_pointer_from_idx(layer->name_idx);
     if (name)
     {
       if (strcmp((const char *)search_name, (const char *)name) == 0) return layer;
     }
-    layer = flash_storage_get_pointer_from_offset(layer->next_idx);
+    layer = flash_storage_get_pointer_from_idx(layer->next_idx);
   }
   return layer;
 }
@@ -275,12 +319,12 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
         }
         case ANYKEY_ACTION_NEXT_LAYER:
           // no parameter -> no cast needed
-          _anykey_set_layer(flash_storage_get_pointer_from_offset(_anykey_current_layer->next_idx));
+          _anykey_set_layer(flash_storage_get_pointer_from_idx(_anykey_current_layer->next_idx));
           i += sizeof(anykey_action_layer_t);
           break;
         case ANYKEY_ACTION_PREV_LAYER:
           // no parameter -> no cast needed
-          _anykey_set_layer(flash_storage_get_pointer_from_offset(_anykey_current_layer->prev_idx));
+          _anykey_set_layer(flash_storage_get_pointer_from_idx(_anykey_current_layer->prev_idx));
           i += sizeof(anykey_action_layer_t);
           break;
         case ANYKEY_ACTION_ADJUST_CONTRAST:
@@ -426,8 +470,8 @@ void anykey_show_layer_sh(BaseSequentialStream *chp, int argc, char *argv[])
     return;
   }
   uint8_t active = (layer == _anykey_current_layer) ? 'x' : ' ';
-  void *next = flash_storage_get_pointer_from_offset(layer->next_idx);
-  void *prev = flash_storage_get_pointer_from_offset(layer->prev_idx);
+  void *next = flash_storage_get_pointer_from_idx(layer->next_idx);
+  void *prev = flash_storage_get_pointer_from_idx(layer->prev_idx);
   uint8_t i = 0;
   chprintf(chp, "Found layer %s at address 0x%08p\r\n\r\n", argv[0], layer);
   chprintf(chp, " Active Next        Prev\r\n");
@@ -442,19 +486,19 @@ void anykey_show_layer_sh(BaseSequentialStream *chp, int argc, char *argv[])
   chprintf(chp, "\r\n Displays |");
   for (i = 0; i < ANYKEY_NUMBER_OF_KEYS; i++)
   {
-    void *p = flash_storage_get_pointer_from_offset(layer->display_idx[i]);
+    void *p = flash_storage_get_pointer_from_idx(layer->display_idx[i]);
     chprintf(chp, " 0x%08p", p);
   }
   chprintf(chp, "\r\n Press    |");
   for (i = 0; i < ANYKEY_NUMBER_OF_KEYS; i++)
   {
-    void *p = flash_storage_get_pointer_from_offset(layer->key_action_press_idx[i]);
+    void *p = flash_storage_get_pointer_from_idx(layer->key_action_press_idx[i]);
     chprintf(chp, " 0x%08p", p);
   }
   chprintf(chp, "\r\n Release  |");
   for (i = 0; i < ANYKEY_NUMBER_OF_KEYS; i++)
   {
-    void *p = flash_storage_get_pointer_from_offset(layer->key_action_release_idx[i]);
+    void *p = flash_storage_get_pointer_from_idx(layer->key_action_release_idx[i]);
     chprintf(chp, " 0x%08p", p);
   }
   chprintf(chp, "\r\n");
@@ -475,10 +519,10 @@ void anykey_list_layers_sh(BaseSequentialStream *chp, int argc, char *argv[])
   while (layer)
   {
     uint8_t active = (layer == _anykey_current_layer) ? 'x' : ' ';
-    uint8_t *name = flash_storage_get_pointer_from_offset(layer->name_idx);
+    uint8_t *name = flash_storage_get_pointer_from_idx(layer->name_idx);
     uint8_t empty[] = "---\0";
     chprintf(chp, "   %c    %s\r\n", active, ((name) ? name : empty));
-    layer = flash_storage_get_pointer_from_offset(layer->next_idx);
+    layer = flash_storage_get_pointer_from_idx(layer->next_idx);
   }
 }
 
