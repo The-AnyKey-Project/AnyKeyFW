@@ -80,6 +80,7 @@ typedef enum
   ANYKEY_CMD_GET_FLASH_INFO,
   ANYKEY_CMD_SET_FALSH,
   ANYKEY_CMD_GET_FALSH,
+  ANYKEY_CMD_ERR
 } __attribute__((packed)) anykey_cmd_t;
 
 /*
@@ -100,7 +101,7 @@ typedef struct
 {
   anykey_cmd_t cmd;
   glcd_display_id_t display;
-  int8_t contrast[GLCD_DISP_MAX];
+  uint8_t contrast[GLCD_DISP_MAX];
 } __attribute__((packed)) anykey_cmd_set_contrast_req_t;
 
 typedef struct
@@ -161,7 +162,7 @@ typedef struct
 typedef struct
 {
   anykey_cmd_t cmd;
-  int8_t contrast[GLCD_DISP_MAX];
+  uint8_t contrast[GLCD_DISP_MAX];
 } __attribute__((packed)) anykey_cmd_get_contrast_resp_t;
 
 typedef struct

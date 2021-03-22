@@ -22,7 +22,7 @@ typedef enum
   GLCD_DISP_8,
   GLCD_DISP_9,
   GLCD_DISP_MAX
-} glcd_display_id_t;
+} __attribute__((packed)) glcd_display_id_t;
 
 typedef struct
 {

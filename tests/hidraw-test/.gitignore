@@ -1,0 +1,5 @@
+anykey-hidraw-test
+.project
+.cproject
+/build/
+.o

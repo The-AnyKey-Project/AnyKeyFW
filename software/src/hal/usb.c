@@ -65,8 +65,10 @@ static usb_hid_kbd_report_t *_usb_hid_kbd_report_inflight = (usb_hid_kbd_report_
 static uint8_t _usb_hid_report_payload_idx = 0;
 static uint8_t _usb_hid_report_idx = 0;
 static uint8_t _usb_hid_report_retry_counter = 0;
-static uint8_t _usb_hid_raw_input_buffer[USB_HID_RAW_EPSIZE * USB_HID_RAW_INPUT_BUFFER_ENTRIES];
-static uint8_t _usb_hid_raw_output_buffer[USB_HID_RAW_EPSIZE * USB_HID_RAW_OUTPUT_BUFFER_ENTRIES];
+static uint8_t
+    _usb_hid_raw_input_buffer[BQ_BUFFER_SIZE(USB_HID_RAW_INPUT_BUFFER_ENTRIES, USB_HID_RAW_EPSIZE)];
+static uint8_t _usb_hid_raw_output_buffer[BQ_BUFFER_SIZE(USB_HID_RAW_OUTPUT_BUFFER_ENTRIES,
+                                                         USB_HID_RAW_EPSIZE)];
 static input_buffers_queue_t _usb_hid_raw_input_queue;
 static input_buffers_queue_t _usb_hid_raw_output_queue;
 
@@ -811,17 +813,17 @@ static void _usb_hid_raw_sof_hook(void)
     return;
   }
 
-  /* Checking if there only a buffer partially filled, if so then it is
-     enforced in the queue and transmitted.*/
-  if (obqTryFlushI(&_usb_hid_raw_output_queue))
-  {
-    size_t n;
-    uint8_t *buf = obqGetFullBufferI(&_usb_hid_raw_output_queue, &n);
-
-    osalDbgAssert(buf != NULL, "queue is empty");
-
-    usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP, buf, n);
-  }
+  //  /* Checking if there only a buffer partially filled, if so then it is
+  //     enforced in the queue and transmitted.*/
+  //  if (obqTryFlushI(&_usb_hid_raw_output_queue))
+  //  {
+  //    size_t n;
+  //    uint8_t *buf = obqGetFullBufferI(&_usb_hid_raw_output_queue, &n);
+  //
+  //    osalDbgAssert(buf != NULL, "queue is empty");
+  //
+  //    usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP, buf, n);
+  //  }
 }
 
 static void _usb_hid_raw_configured_hook(void)

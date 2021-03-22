@@ -15,7 +15,7 @@
 #define USB_DEVICE_VER           0x0200
 #define USB_HID_KBD_EPSIZE       0x08
 #define USB_HID_KBDEXT_EPSIZE    0x08
-#define USB_HID_RAW_EPSIZE       0x10
+#define USB_HID_RAW_EPSIZE       0x40
 #define USB_CDC_INT_EPSIZE       0x08
 #define USB_CDC_DATA_EPSIZE      0x40
 #define USB_CONFIG_DESC_HID_SIZE 0x09

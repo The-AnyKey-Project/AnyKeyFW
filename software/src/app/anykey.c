@@ -155,12 +155,11 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
         case ANYKEY_CMD_GET_CONTRAST:
         {
           uint8_t i = 0;
+          glcd_display_id_t id = req->get_contrast.display;
           for (i = 0; i < GLCD_DISP_MAX; i++)
           {
             resp->get_contrast.contrast[i] =
-                (req->get_contrast.display == i || req->get_contrast.display == GLCD_DISP_MAX)
-                    ? glcd_get_contrast(i)
-                    : 0;
+                (id == i || id == GLCD_DISP_MAX) ? glcd_get_contrast(i) : 0;
           }
           _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_contrast_resp_t),
                                        USB_HID_RAW_EPSIZE);
