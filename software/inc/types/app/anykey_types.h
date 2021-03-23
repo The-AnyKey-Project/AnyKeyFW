@@ -147,7 +147,7 @@ typedef union
   anykey_cmd_get_contrast_req_t get_contrast;
   anykey_cmd_get_flash_info_req_t get_flash_info;
   anykey_cmd_set_flash_req_t set_flash;
-  anykey_cmd_set_flash_req_t get_flash;
+  anykey_cmd_get_flash_req_t get_flash;
 } anykey_cmd_req_t;
 
 /*

@@ -38,6 +38,7 @@ typedef struct
   glcd_display_id_t d;
   uint8_t c;
   char *f;
+  uint8_t v;
 } cli_args_t;
 
 typedef void (*action_callback)(int fd, uint8_t *buf, cli_args_t *args);

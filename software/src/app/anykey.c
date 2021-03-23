@@ -210,10 +210,10 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
           {
             resp->get_flash.block_size = (residual > block_size) ? block_size : residual;
             residual -= resp->get_flash.block_size;
-            resp->get_flash.final_block = (residual) ? 1 : 0;
+            resp->get_flash.final_block = (residual) ? 0 : 1;
             memcpy(resp->get_flash.buffer, &sector[block_size * resp->get_flash.block_cnt],
                    resp->get_flash.block_size);
-            send_resp = 1;
+            usb_hid_raw_send((uint8_t *)resp, USB_HID_RAW_EPSIZE);
           }
 
           break;

@@ -13,8 +13,8 @@
 #include "main.h"
 
 anykey_action_t cmdstr_to_action(char *cmd);
-size_t send_buffer(int fd, uint8_t *buf);
-size_t recv_buffer(int fd, uint8_t *buf);
+int send_buffer(int fd, uint8_t *buf, cli_args_t *args);
+int recv_buffer(int fd, uint8_t *buf, cli_args_t *args);
 static error_t parse_opt(int key, char *arg, struct argp_state *state);
 void set_layer(int fd, uint8_t *buf, cli_args_t *args);
 void get_layer(int fd, uint8_t *buf, cli_args_t *args);
@@ -39,6 +39,7 @@ static char args_doc[] = "ARG1 ARG2";
 static struct argp_option options[] = {
     {"device", 'D', "DEVIE", 0, "HID raw device to be used"},
     {"command", 'C', "CMD", 0, "Command to be send"},
+    {"verbose", 'v', 0, 0, "Verbose output"},
     {0, 0, 0, 0, "Additional options for 'set-layer' command"},
     {"layer", 'l', "NAME", 0, "Layer to be set"},
     {0, 0, 0, 0, "Additional options for 'set-contrast' command"},
@@ -54,8 +55,8 @@ static struct argp_option options[] = {
 };
 
 static const char const *cmdstrings[] = {
-    "set-layer",  "get-layer", "set-contrast", "get-contrast",
-    "flash-info", "set-flash", "get-flash",
+    "set-layer",      "get-layer", "set-contrast", "get-contrast",
+    "get-flash-info", "set-flash", "get-flash",
 };
 
 static struct argp argp = {options, parse_opt, args_doc, doc, 0, 0, 0};
@@ -70,6 +71,9 @@ const char const *glcdidstrings[] = {
     "GLCD_DISP_6", "GLCD_DISP_7", "GLCD_DISP_8", "GLCD_DISP_9", "GLCD_DISP_MAX",
 };
 
+static uint32_t flash_size = 0;
+static uint32_t sector_size = 0;
+
 anykey_action_t cmdstr_to_action(char *cmd)
 {
   if (strcmp(cmdstrings[ANYKEY_CMD_SET_LAYER], cmd) == 0) return ANYKEY_CMD_SET_LAYER;
@@ -82,35 +86,40 @@ anykey_action_t cmdstr_to_action(char *cmd)
   return ANYKEY_CMD_ERR;
 }
 
-size_t send_buffer(int fd, uint8_t *buf)
+int send_buffer(int fd, uint8_t *buf, cli_args_t *args)
 {
   /*
    * buf[0] is not used for actual payload according to:
    * https://www.kernel.org/doc/html/latest/hid/hidraw.html
    */
-  size_t res = write(fd, buf, USB_HID_RAW_EPSIZE + 1);
-
-  if (res < 0)
+  int res = write(fd, buf, USB_HID_RAW_EPSIZE + 1);
+  if (args->v)
   {
-    printf("write() error: %d\n", errno);
-  }
-  else
-  {
-    printf("write() wrote %d bytes\n", (res - 1));
+    if (res < 0)
+    {
+      printf("write() error: %d\n", errno);
+    }
+    else
+    {
+      printf("write() wrote %d bytes\n", (res - 1));
+    }
   }
   return res;
 }
 
-size_t recv_buffer(int fd, uint8_t *buf)
+int recv_buffer(int fd, uint8_t *buf, cli_args_t *args)
 {
-  size_t res = read(fd, buf, USB_HID_RAW_EPSIZE);
-  if (res < 0)
+  int res = read(fd, buf, USB_HID_RAW_EPSIZE);
+  if (args->v)
   {
-    printf("read() error: %d\n", errno);
-  }
-  else
-  {
-    printf("read() read %d bytes\n", res);
+    if (res < 0)
+    {
+      printf("read() error: %d\n", errno);
+    }
+    else
+    {
+      printf("read() read %d bytes\n", res);
+    }
   }
   return res;
 }
@@ -145,6 +154,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     case 'f':
       arguments->f = arg;
       break;
+    case 'v':
+      arguments->v = 1;
+      break;
     case ARGP_KEY_ARG:
       return 0;
     default:
@@ -175,7 +187,7 @@ void set_layer(int fd, uint8_t *buf, cli_args_t *args)
   req->cmd = args->C;
   memcpy(req->name, args->l, strlen(args->l));
   req_printf(req->cmd, req->name);
-  send_buffer(fd, buf);
+  send_buffer(fd, buf, args);
 }
 
 void get_layer(int fd, uint8_t *buf, cli_args_t *args)
@@ -186,11 +198,11 @@ void get_layer(int fd, uint8_t *buf, cli_args_t *args)
   req->cmd = args->C;
 
   req_printf(req->cmd, "\0");
-  size_t res = send_buffer(fd, buf);
+  int res = send_buffer(fd, buf, args);
 
   if (res > 0)
   {
-    res = recv_buffer(fd, buf);
+    res = recv_buffer(fd, buf, args);
     if (res > 0)
     {
       resp_printf(resp->cmd, resp->name);
@@ -214,7 +226,7 @@ void set_contrast(int fd, uint8_t *buf, cli_args_t *args)
   }
 
   req_printf(req->cmd, params_printf);
-  send_buffer(fd, buf);
+  send_buffer(fd, buf, args);
 }
 
 void get_contrast(int fd, uint8_t *buf, cli_args_t *args)
@@ -229,11 +241,11 @@ void get_contrast(int fd, uint8_t *buf, cli_args_t *args)
   sprintf(params_printf, "%s", glcdidstrings[args->d]);
 
   req_printf(req->cmd, params_printf);
-  size_t res = send_buffer(fd, buf);
+  int res = send_buffer(fd, buf, args);
 
   if (res > 0)
   {
-    res = recv_buffer(fd, buf);
+    res = recv_buffer(fd, buf, args);
     if (res > 0)
     {
       params_printf[0] = '\0';
@@ -248,20 +260,108 @@ void get_contrast(int fd, uint8_t *buf, cli_args_t *args)
 
 void get_flash_info(int fd, uint8_t *buf, cli_args_t *args)
 {
-  anykey_cmd_req_t *req = (anykey_cmd_req_t *)&buf[1];
-  anykey_cmd_resp_t *resp = (anykey_cmd_resp_t *)buf;
+  anykey_cmd_get_flash_info_req_t *req = (anykey_cmd_get_flash_info_req_t *)&buf[1];
+  anykey_cmd_get_flash_info_resp_t *resp = (anykey_cmd_get_flash_info_resp_t *)buf;
+  char params_printf[64];
+
+  req->cmd = args->C;
+
+  req_printf(req->cmd, "\0");
+  int res = send_buffer(fd, buf, args);
+
+  if (res > 0)
+  {
+    res = recv_buffer(fd, buf, args);
+    if (res > 0)
+    {
+      sprintf(params_printf, "Flash size: %d, Sector size: %d", resp->flash_size,
+              resp->sector_size);
+      resp_printf(resp->cmd, params_printf);
+      flash_size = resp->flash_size;
+      sector_size = resp->sector_size;
+    }
+  }
 }
 
 void set_flash(int fd, uint8_t *buf, cli_args_t *args)
 {
-  anykey_cmd_req_t *req = (anykey_cmd_req_t *)&buf[1];
-  anykey_cmd_resp_t *resp = (anykey_cmd_resp_t *)buf;
+  anykey_cmd_set_flash_req_t *req = (anykey_cmd_set_flash_req_t *)&buf[1];
+  anykey_cmd_set_flash_resp_t *resp = (anykey_cmd_set_flash_resp_t *)buf;
+
+  cli_args_t dummy_args = {.C = ANYKEY_CMD_GET_FLASH_INFO};
+  char params_printf[128];
+
+  get_flash_info(fd, buf, &dummy_args);
+
+  if (flash_size && sector_size)
+  {
+    // ToDo
+  }
 }
 
 void get_flash(int fd, uint8_t *buf, cli_args_t *args)
 {
-  anykey_cmd_req_t *req = (anykey_cmd_req_t *)&buf[1];
-  anykey_cmd_resp_t *resp = (anykey_cmd_resp_t *)buf;
+  anykey_cmd_get_flash_req_t *req = (anykey_cmd_get_flash_req_t *)&buf[1];
+  anykey_cmd_get_flash_resp_t *resp = (anykey_cmd_get_flash_resp_t *)buf;
+
+  cli_args_t dummy_args = {.C = ANYKEY_CMD_GET_FLASH_INFO};
+  char params_printf[256];
+
+  get_flash_info(fd, buf, &dummy_args);
+
+  if (flash_size && sector_size)
+  {
+    uint32_t sectors = flash_size / sector_size;
+    uint32_t i = 0;
+    uint8_t *sector = malloc(sector_size * sizeof(uint8_t));
+    int output_fd = 0;
+    //    if (args->f)
+    //    {
+    //      output_fd = open(args->f, O_RDWR);
+    //    }
+
+    for (i = 0; i < sectors; i++)
+    {
+      buf[0] = 0;
+
+      req->cmd = args->C;
+      req->sector = i;
+
+      sprintf(params_printf, "Sector %d", req->sector);
+      req_printf(req->cmd, params_printf);
+      int res = send_buffer(fd, buf, args);
+
+      if (res > 0)
+      {
+        uint32_t sector_idx = 0;
+        do
+        {
+          uint32_t n = 0;
+          res = recv_buffer(fd, buf, args);
+          if (res > 0)
+          {
+            memcpy(&sector[sector_idx], resp->buffer, resp->block_size);
+            sector_idx += resp->block_size;
+            sprintf(params_printf, "Sector %d, Block %d, Size %d, Final %d, Payload: [", i,
+                    resp->block_cnt, resp->block_size, resp->final_block);
+            uint16_t upper_bound = (args->v) ? resp->block_size : 3;
+            for (n = 0; n < upper_bound; n++)
+            {
+              sprintf(params_printf, "%s %02X", params_printf, resp->buffer[n]);
+            }
+            sprintf(params_printf, "%s %s]", params_printf, (args->v) ? "\0" : "...");
+            resp_printf(resp->cmd, params_printf);
+          }
+        } while (!resp->final_block && res > 0);
+        //        write(output_fd, sector, sector_size * sizeof(uint8_t));
+      }
+    }
+    //    if (args->f)
+    //    {
+    //      close(output_fd);
+    //    }
+    free(sector);
+  }
 }
 
 void cmd_error(int fd, uint8_t *buf, cli_args_t *args)
@@ -290,6 +390,7 @@ int main(int argc, char **argv)
       .d = GLCD_DISP_MAX,
       .c = 0,
       .f = NULL,
+      .v = 0,
   };
 
   argp_parse(&argp, argc, argv, 0, 0, &arguments);
@@ -300,7 +401,7 @@ int main(int argc, char **argv)
     return 1;
   }
 
-  fd = open(arguments.D, O_RDWR | O_NONBLOCK);
+  fd = open(arguments.D, O_RDWR);
 
   if (fd < 0)
   {
