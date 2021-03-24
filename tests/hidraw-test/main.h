@@ -39,6 +39,7 @@ typedef struct
   uint8_t c;
   char *f;
   uint8_t v;
+  uint8_t q;
 } cli_args_t;
 
 typedef void (*action_callback)(int fd, uint8_t *buf, cli_args_t *args);

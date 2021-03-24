@@ -3,3 +3,4 @@ anykey-hidraw-test
 .cproject
 /build/
 *.o
+out.bin
