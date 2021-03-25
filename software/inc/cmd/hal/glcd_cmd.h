@@ -24,6 +24,7 @@
 #ifndef INC_CMD_GLCD_CMD_H_
 #define INC_CMD_GLCD_CMD_H_
 
+#if defined(USE_CMD_SHELL)
 /*
  * Global definition of shell commands
  * for module glcd
@@ -42,5 +43,6 @@ extern void glcd_reload_contrast_sh(BaseSequentialStream *chp, int argc, char *a
     {"glcd-get-contrast",    glcd_get_contrast_sh}, \
     {"glcd-reload-contrast", glcd_reload_contrast_sh}
 // clang-format on
+#endif
 
 #endif /* INC_CMD_GLCD_CMD_H_ */

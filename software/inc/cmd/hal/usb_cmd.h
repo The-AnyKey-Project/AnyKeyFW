@@ -24,6 +24,7 @@
 #ifndef INC_CMD_USB_HID_H_
 #define INC_CMD_USB_HID_H_
 
+#if defined(USE_CMD_SHELL)
 /*
  * Global definition of shell commands
  * for module keypad
@@ -32,11 +33,12 @@ extern void usb_loop_hid_raw_input(BaseSequentialStream *chp, int argc, char *ar
 
 /*
  * Shell command list
- * for module kepad
+ * for module usb
  */
 // clang-format off
 #define USB_CMD_LIST \
     {"usb-loop-hid-raw", usb_loop_hid_raw_input}
 // clang-format on
+#endif
 
 #endif /* INC_CMD_USB_HID_H_ */

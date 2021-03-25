@@ -24,6 +24,7 @@
 #ifndef INC_CMD_ANYKEY_CMD_H_
 #define INC_CMD_ANYKEY_CMD_H_
 
+#if defined(USE_CMD_SHELL)
 /*
  * Global definition of shell commands
  * for module anykey
@@ -44,4 +45,6 @@ extern void anykey_set_layer_sh(BaseSequentialStream *chp, int argc, char *argv[
             {"ak-list-layers", anykey_list_layers_sh}, \
             {"ak-set-layer",   anykey_set_layer_sh}
 // clang-format on
+#endif
+
 #endif /* INC_CMD_ANYKEY_CMD_H_ */

@@ -321,6 +321,7 @@ static const uint8_t _usb_configuration_descriptor_data[] = {
                       USB_HID_RAW_EPSIZE,     // wMaxPacketSize
                       10),                    // bInterval
 
+#if defined(USE_CMD_SHELL)
     USB_DESC_INTERFACE_ASSOCIATION(USB_CDC_INT_INTERFACE,             /* bFirstInterface.         */
                                    2,                                 /* bInterfaceCount.         */
                                    CDC_COMMUNICATION_INTERFACE_CLASS, /* bFunctionClass.          */
@@ -401,6 +402,7 @@ static const uint8_t _usb_configuration_descriptor_data[] = {
                       USB_EP_MODE_TYPE_BULK,          /* bmAttributes (Bulk).             */
                       USB_CDC_DATA_EPSIZE,            /* wMaxPacketSize.                  */
                       0x00),                          /* bInterval.                       */
+#endif
 };
 
 /* Configuration Descriptor wrapper */
@@ -414,8 +416,11 @@ static const USBDescriptor _usb_hid_kbdext_descriptor = {
     USB_CONFIG_DESC_HID_SIZE, &_usb_configuration_descriptor_data[USB_HID_KBDEXT_DESC_OFFSET]};
 static const USBDescriptor _usb_hid_raw_descriptor = {
     USB_CONFIG_DESC_HID_SIZE, &_usb_configuration_descriptor_data[USB_HID_RAW_DESC_OFFSET]};
+
+#if defined(USE_CMD_SHELL)
 static const USBDescriptor _usb_cdc_descriptor = {
     USB_CONFIG_DESC_CDC_SIZE, &_usb_configuration_descriptor_data[USB_CDC_DESC_OFFSET]};
+#endif
 
 /*
  * U.S. English language identifier.
@@ -536,28 +541,32 @@ static const USBEndpointConfig _usb_ep_configs[] = {
      &_usb_ep_in_states[USB_HID_KBDEXT_EPS_IN], NULL, 2, NULL},
     {USB_EP_MODE_TYPE_INTR, NULL, _usb_hid_raw_in_cb, _usb_hid_raw_out_cb, USB_HID_RAW_EPSIZE, USB_HID_RAW_EPSIZE,
      &_usb_ep_in_states[USB_HID_RAW_EPS_IN], &_usb_ep_out_states[USB_HID_RAW_EPS_OUT], 2, NULL},
-    {USB_EP_MODE_TYPE_INTR, NULL, sduInterruptTransmitted, NULL, 0x0010, 0x0000,
+#if defined(USE_CMD_SHELL)
+     {USB_EP_MODE_TYPE_INTR, NULL, sduInterruptTransmitted, NULL, 0x0010, 0x0000,
      &_usb_ep_in_states[USB_CDC_INT_REQUEST_EPS_IN], NULL, 2, NULL},
     {USB_EP_MODE_TYPE_BULK, NULL, sduDataTransmitted, sduDataReceived, 0x0040, 0x0040,
      &_usb_ep_in_states[USB_CDC_DATA_REQUEST_EPS_IN], &_usb_ep_out_states[USB_CDC_DATA_AVAILABLE_EPS_OUT], 2, NULL},
+#endif
 };
 // clang-format on
-
-/*
- * Global variables
- */
-SerialUSBDriver USB_CDC_DRIVER_HANDLE;
 
 /*
  * USB driver configuration.
  */
 const USBConfig usbcfg = {_usb_event_cb, _usb_get_descriptor_cb, _usb_request_hook_cb, _usb_sof_cb};
 
+#if defined(USE_CMD_SHELL)
+/*
+ * Global variables
+ */
+SerialUSBDriver USB_CDC_DRIVER_HANDLE;
+
 /*
  * Serial over USB driver configuration.
  */
 const SerialUSBConfig serusbcfg = {&USB_DRIVER_HANDLE, USB_CDC_DATA_REQUEST_EP,
                                    USB_CDC_DATA_AVAILABLE_EP, USB_CDC_INT_REQUEST_EP};
+#endif
 
 /*
  * Tasks
@@ -568,11 +577,13 @@ const SerialUSBConfig serusbcfg = {&USB_DRIVER_HANDLE, USB_CDC_DATA_REQUEST_EP,
  */
 static void _usb_init_hal(void)
 {
+#if defined(USE_CMD_SHELL)
   /*
    * Initializes a serial-over-USB CDC driver.
    */
   sduObjectInit(&(USB_CDC_DRIVER_HANDLE));
   sduStart(&(USB_CDC_DRIVER_HANDLE), &serusbcfg);
+#endif
 }
 
 static void _usb_init_module(void)
@@ -828,18 +839,6 @@ static void _usb_hid_raw_sof_hook(void)
   {
     return;
   }
-
-  //  /* Checking if there only a buffer partially filled, if so then it is
-  //     enforced in the queue and transmitted.*/
-  //  if (obqTryFlushI(&_usb_hid_raw_output_queue))
-  //  {
-  //    size_t n;
-  //    uint8_t *buf = obqGetFullBufferI(&_usb_hid_raw_output_queue, &n);
-  //
-  //    osalDbgAssert(buf != NULL, "queue is empty");
-  //
-  //    usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP, buf, n);
-  //  }
 }
 
 static void _usb_hid_raw_configured_hook(void)
@@ -874,11 +873,13 @@ static void _usb_event_cb(USBDriver *usbp, usbevent_t event)
       usbInitEndpointI(usbp, USB_HID_KBDEXT_EP, &_usb_ep_configs[USB_HID_KBDEXT_INTERFACE]);
       usbInitEndpointI(usbp, USB_HID_RAW_EP, &_usb_ep_configs[USB_HID_RAW_INTERFACE]);
 
+#if defined(USE_CMD_SHELL)
       usbInitEndpointI(usbp, USB_CDC_INT_REQUEST_EP, &_usb_ep_configs[USB_CDC_INT_INTERFACE]);
       usbInitEndpointI(usbp, USB_CDC_DATA_REQUEST_EP, &_usb_ep_configs[USB_CDC_DATA_INTERFACE]);
 
       /* Resetting the state of the CDC subsystem.*/
       sduConfigureHookI(&USB_CDC_DRIVER_HANDLE);
+#endif
 
       _usb_hid_raw_configured_hook();
 
@@ -889,6 +890,7 @@ static void _usb_event_cb(USBDriver *usbp, usbevent_t event)
     case USB_EVENT_UNCONFIGURED:
       /* Falls into.*/
     case USB_EVENT_SUSPEND:
+#if defined(USE_CMD_SHELL)
       chSysLockFromISR();
 
       /* Disconnection event on suspend.*/
@@ -896,7 +898,9 @@ static void _usb_event_cb(USBDriver *usbp, usbevent_t event)
 
       chSysUnlockFromISR();
       return;
+#endif
     case USB_EVENT_WAKEUP:
+#if defined(USE_CMD_SHELL)
       chSysLockFromISR();
 
       /* Connection event on wakeup.*/
@@ -904,6 +908,7 @@ static void _usb_event_cb(USBDriver *usbp, usbevent_t event)
 
       chSysUnlockFromISR();
       return;
+#endif
     case USB_EVENT_STALLED:
       return;
   }
@@ -924,8 +929,10 @@ static const USBDescriptor *_usb_get_descriptor_cb(USBDriver *usbp, uint8_t dtyp
     case USB_DESCRIPTOR_STRING:
       if (dindex < 4) return &_usb_desc_strings[dindex];
       break;
+#if defined(USE_CMD_SHELL)
     case USB_DESCRIPTOR_CDC:
       return &_usb_cdc_descriptor;
+#endif
     case USB_DESCRIPTOR_HID: /* HID Descriptors */
       switch (lang)
       {
@@ -966,7 +973,11 @@ static bool _usb_request_hook_cb(USBDriver *usbp)
   {
     return TRUE;
   }
+#if defined(USE_CMD_SHELL)
   return sduRequestsHook(usbp);
+#else
+  return FALSE;
+#endif
 }
 
 static void _usb_sof_cb(USBDriver *usbp)
@@ -974,8 +985,13 @@ static void _usb_sof_cb(USBDriver *usbp)
   (void)usbp;
 
   chSysLockFromISR();
+
+#if defined(USE_CMD_SHELL)
   sduSOFHookI(&USB_CDC_DRIVER_HANDLE);
+#endif
+
   _usb_hid_raw_sof_hook();
+
   chSysUnlockFromISR();
 }
 
@@ -1112,6 +1128,7 @@ static void _usb_hid_raw_obnotify_cb(io_buffers_queue_t *bqp)
   }
 }
 
+#if defined(USE_CMD_SHELL)
 /*
  * Shell functions
  */
@@ -1143,6 +1160,7 @@ void usb_loop_hid_raw_input(BaseSequentialStream *chp, int argc, char *argv[])
   }
   chprintf(chp, "\r\n\nstopped\r\n");
 }
+#endif
 
 /*
  * API functions

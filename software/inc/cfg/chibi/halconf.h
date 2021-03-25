@@ -150,7 +150,11 @@
  * @brief   Enables the SERIAL over USB subsystem.
  */
 #if !defined(HAL_USE_SERIAL_USB) || defined(__DOXYGEN__)
+#if defined(USE_CMD_SHELL)
 #define HAL_USE_SERIAL_USB                  TRUE
+#else
+#define HAL_USE_SERIAL_USB                  FALSE
+#endif
 #endif
 
 /**

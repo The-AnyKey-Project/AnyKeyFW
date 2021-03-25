@@ -50,9 +50,11 @@
 static void _flash_storage_init_hal(void);
 static void _flash_storage_init_module(void);
 static void _flash_storage_write_default_config(void);
-static uint8_t _flash_storage_verify_config(uint8_t *config, uint32_t size);
 static uint32_t _flash_storage_get_crc(void);
 static uint16_t _flash_storage_get_first_sector(void);
+#if defined(USE_CMD_SHELL)
+static uint8_t _flash_storage_verify_config(uint8_t *config, uint32_t size);
+#endif
 
 /*
  * Static variables
@@ -309,17 +311,6 @@ static void _flash_storage_write_default_config(void)
                   (const uint8_t *)&_flash_storage_default_layer);
 }
 
-static uint8_t _flash_storage_verify_config(uint8_t *config, uint32_t size)
-{
-  uint32_t i = 0;
-  for (i = 0; i < size; i++)
-  {
-    if (config[i] != _flash_storage_area[i]) return 0;
-  }
-
-  return 1;
-}
-
 static uint32_t _flash_storage_get_crc(void)
 {
   crcResetI(&FLASH_STORAGE_CRC_HANDLE);
@@ -332,14 +323,28 @@ static uint16_t _flash_storage_get_first_sector(void)
   const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
   return FLASH_STORAGE_LAST_SECTOR - FLASH_STORAGE_SIZE / desc->sectors_size;
 }
+
+#if defined(USE_CMD_SHELL)
+static uint8_t _flash_storage_verify_config(uint8_t *config, uint32_t size)
+{
+  uint32_t i = 0;
+  for (i = 0; i < size; i++)
+  {
+    if (config[i] != _flash_storage_area[i]) return 0;
+  }
+
+  return 1;
+}
+#endif
+
 /*
  * Callback functions
  */
 
+#if defined(USE_CMD_SHELL)
 /*
  * Shell functions
  */
-
 void flash_storage_info_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
   (void)argv;
@@ -397,6 +402,7 @@ void flash_storage_write_default_sh(BaseSequentialStream *chp, int argc, char *a
     chprintf(chp, "abort!\r\n");
   }
 }
+#endif
 
 /*
  * API functions

@@ -276,6 +276,7 @@ static void _glcd_reload_contrast(void)
   }
 }
 
+#if defined(USE_CMD_SHELL)
 /*
  * Shell functions
  */
@@ -330,6 +331,7 @@ void glcd_reload_contrast_sh(BaseSequentialStream *chp, int argc, char *argv[])
   _glcd_reload_contrast();
   chprintf(chp, "done!\r\n");
 }
+#endif
 
 /*
  * API functions

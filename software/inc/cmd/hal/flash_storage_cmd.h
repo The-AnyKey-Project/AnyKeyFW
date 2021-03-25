@@ -24,6 +24,7 @@
 #ifndef INC_CMD_HAL_FLASH_STORAGE_CMD_H_
 #define INC_CMD_HAL_FLASH_STORAGE_CMD_H_
 
+#if defined(USE_CMD_SHELL)
 /*
  * Global definition of shell commands
  * for module flash storage
@@ -33,11 +34,13 @@ extern void flash_storage_write_default_sh(BaseSequentialStream *chp, int argc, 
 
 /*
  * Shell command list
- * for module anykey
+ * for module flash_storage
  */
 // clang-format off
 #define FLASH_STORAGE_CMD_LIST \
             {"fs-info",   flash_storage_info_sh}, \
             {"fs-write-default",   flash_storage_write_default_sh} \
 // clang-format on
+#endif
+
 #endif /* INC_CMD_HAL_FLASH_STORAGE_CMD_H_ */

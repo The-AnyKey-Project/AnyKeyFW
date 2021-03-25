@@ -61,10 +61,12 @@ static_assert(ANYKEY_NUMBER_OF_KEYS == (GLCD_DISP_MAX),
 static void _anykey_init_hal(void);
 static void _anykey_init_module(void);
 static void _anykey_fill_response_buffer(uint8_t *buffer, uint16_t already_filled, uint16_t size);
-static anykey_layer_t *_anykey_get_layer_by_name(char *search_name);
 static void _anykey_set_layer(anykey_layer_t *layer);
 static void _anykey_handle_action(anykey_action_list_t *action_list);
+#if defined(USE_CMD_SHELL)
+static anykey_layer_t *_anykey_get_layer_by_name(char *search_name);
 static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t *action_list);
+#endif
 
 /*
  * Static variables
@@ -273,21 +275,6 @@ static void _anykey_fill_response_buffer(uint8_t *buffer, uint16_t already_fille
   memset(&buffer[already_filled], 0, size - already_filled);
 }
 
-static anykey_layer_t *_anykey_get_layer_by_name(char *search_name)
-{
-  anykey_layer_t *layer = flash_storage_get_first_layer();
-  while (layer)
-  {
-    uint8_t *name = flash_storage_get_pointer_from_idx(layer->name_idx);
-    if (name)
-    {
-      if (strcmp((const char *)search_name, (const char *)name) == 0) return layer;
-    }
-    layer = flash_storage_get_pointer_from_idx(layer->next_idx);
-  }
-  return layer;
-}
-
 static void _anykey_set_layer(anykey_layer_t *layer)
 {
   if (layer)
@@ -366,6 +353,22 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
       }
     }
   }
+}
+
+#if defined(USE_CMD_SHELL)
+static anykey_layer_t *_anykey_get_layer_by_name(char *search_name)
+{
+  anykey_layer_t *layer = flash_storage_get_first_layer();
+  while (layer)
+  {
+    uint8_t *name = flash_storage_get_pointer_from_idx(layer->name_idx);
+    if (name)
+    {
+      if (strcmp((const char *)search_name, (const char *)name) == 0) return layer;
+    }
+    layer = flash_storage_get_pointer_from_idx(layer->next_idx);
+  }
+  return layer;
 }
 
 static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t *action_list)
@@ -454,15 +457,15 @@ static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t
     }
   }
 }
-
+#endif
 /*
  * Callback functions
  */
 
+#if defined(USE_CMD_SHELL)
 /*
  * Shell functions
  */
-
 void anykey_show_actions_sh(BaseSequentialStream *chp, int argc, char *argv[])
 {
   if (argc != 1)
@@ -572,6 +575,7 @@ void anykey_set_layer_sh(BaseSequentialStream *chp, int argc, char *argv[])
     chprintf(chp, "Layer %s is already active\r\n", argv[0]);
   }
 }
+#endif
 
 /*
  * API functions
@@ -615,7 +619,7 @@ void anykey_init(void)
   /*
    * Nothing to do, kill initial thread
    */
-  chThdExit("good bye");
+  chThdExit(0);
 #endif
   /*
    * If we reach this point,

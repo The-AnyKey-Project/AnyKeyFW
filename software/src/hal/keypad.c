@@ -191,6 +191,7 @@ static void _keypad_init_module(void)
  * Callback functions
  */
 
+#if defined(USE_CMD_SHELL)
 /*
  * Shell functions
  */
@@ -230,6 +231,7 @@ void keypad_loop_switches_sh(BaseSequentialStream *chp, int argc, char *argv[])
   }
   chprintf(chp, "\r\n\nstopped\r\n");
 }
+#endif
 
 /*
  * API functions

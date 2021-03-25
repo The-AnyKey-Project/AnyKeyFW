@@ -34,7 +34,7 @@ extern void usb_hid_kbdext_send_key(usb_hid_report_id_t report_id, uint16_t keye
 extern size_t usb_hid_raw_send(uint8_t *msg, uint8_t size);
 extern size_t usb_hid_raw_receive(uint8_t *msg, uint8_t size);
 
-#ifndef HIDRAW_TEST
+#if !defined(HIDRAW_TEST) && defined(USE_CMD_SHELL)
 extern SerialUSBDriver USB_CDC_DRIVER_HANDLE;
 #endif
 

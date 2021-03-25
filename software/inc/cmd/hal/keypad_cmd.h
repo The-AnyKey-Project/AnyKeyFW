@@ -24,6 +24,7 @@
 #ifndef INC_CMD_KEYPAD_CMD_H_
 #define INC_CMD_KEYPAD_CMD_H_
 
+#if defined(USE_CMD_SHELL)
 /*
  * Global definition of shell commands
  * for module keypad
@@ -32,11 +33,12 @@ extern void keypad_loop_switches_sh(BaseSequentialStream *chp, int argc, char *a
 
 /*
  * Shell command list
- * for module kepad
+ * for module keypad
  */
 // clang-format off
 #define KEYPAD_CMD_LIST \
     {"kp-loop-sw", keypad_loop_switches_sh}
 // clang-format on
+#endif
 
 #endif /* INC_CMD_KEYPAD_CMD_H_ */
