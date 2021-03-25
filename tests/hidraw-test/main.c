@@ -1,42 +1,33 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-3.0
 /*
- * Hidraw Userspace Example
+ * AnyKey hidraw communication example
  *
- * Copyright (c) 2010 Alan Ott <alan@signal11.us>
- * Copyright (c) 2010 Signal 11 Software
- *
- * The code may be used by anyone for any purpose,
- * and can serve as a starting point for developing
- * applications using hidraw.
+ * Copyright (c) 2021 Matthias Beckert
  */
 
 #include "main.h"
 
-anykey_action_t cmdstr_to_action(char *cmd);
-int send_buffer(int fd, uint8_t *buf, cli_args_t *args);
-int recv_buffer(int fd, uint8_t *buf, cli_args_t *args);
-static error_t parse_opt(int key, char *arg, struct argp_state *state);
-void set_layer(int fd, uint8_t *buf, cli_args_t *args);
-void get_layer(int fd, uint8_t *buf, cli_args_t *args);
-void set_contrast(int fd, uint8_t *buf, cli_args_t *args);
-void get_contrast(int fd, uint8_t *buf, cli_args_t *args);
-void get_flash_info(int fd, uint8_t *buf, cli_args_t *args);
-void set_flash(int fd, uint8_t *buf, cli_args_t *args);
-void get_flash(int fd, uint8_t *buf, cli_args_t *args);
-void cmd_error(int fd, uint8_t *buf, cli_args_t *args);
+static anykey_action_t _argp_cmdstr_to_action(char *cmd);
+static error_t _argp_parser(int key, char *arg, struct argp_state *state);
+static int _hidraw_send_buffer(int fd, uint8_t *buf, cli_args_t *args);
+static int _hidraw_recv_buffer(int fd, uint8_t *buf, cli_args_t *args);
+static void _out_req_printf(anykey_cmd_t cmd, char *params, cli_args_t *args);
+static void _out_resp_printf(anykey_cmd_t cmd, char *params, cli_args_t *args);
+static void _out_sprintf_buffer(uint8_t *dst, const char *fmt, uint8_t *src, uint32_t size,
+                                const char *start, const char *stop);
+static void _cb_set_layer(int fd, uint8_t *buf, cli_args_t *args);
+static void _cb_get_layer(int fd, uint8_t *buf, cli_args_t *args);
+static void _cb_set_contrast(int fd, uint8_t *buf, cli_args_t *args);
+static void _cb_get_contrast(int fd, uint8_t *buf, cli_args_t *args);
+static void _cb_get_flash_info(int fd, uint8_t *buf, cli_args_t *args);
+static void _cb_set_flash(int fd, uint8_t *buf, cli_args_t *args);
+static void _cb_get_flash(int fd, uint8_t *buf, cli_args_t *args);
+static void _cb_cmd_error(int fd, uint8_t *buf, cli_args_t *args);
 
-const char *argp_program_version = "anykey-hidraw-test 0.1";
-const char *argp_program_bug_address = "<matthias@beckert.dev>";
-
-/* Program documentation. */
-static char doc[] =
+static char _arpg_doc[] =
     "Simple test program to verify HID raw communication between Anykey firmware and host pc";
 
-/* A description of the arguments we accept. */
-static char args_doc[] = "ARG1 ARG2";
-
-/* The options we understand. */
-static struct argp_option options[] = {
+static struct argp_option _argp_options[] = {
     {"device", 'D', "DEVIE", 0, "HID raw device to be used"},
     {"command", 'C', "CMD", 0, "Command to be send"},
     {"verbose", 'v', 0, 0, "Verbose output"},
@@ -55,19 +46,19 @@ static struct argp_option options[] = {
     {0},
 };
 
-static const char const *cmdstrings[] = {
+static const char const *_argp_cmd_str[] = {
     "set-layer",      "get-layer", "set-contrast", "get-contrast",
     "get-flash-info", "set-flash", "get-flash",
 };
 
-static struct argp argp = {options, parse_opt, args_doc, doc, 0, 0, 0};
+static struct argp _argp = {_argp_options, _argp_parser, 0, _arpg_doc, 0, 0, 0};
 
 static const action_callback action_callback_list[] = {
-    set_layer,      get_layer, set_contrast, get_contrast,
-    get_flash_info, set_flash, get_flash,    cmd_error,
+    _cb_set_layer,      _cb_get_layer, _cb_set_contrast, _cb_get_contrast,
+    _cb_get_flash_info, _cb_set_flash, _cb_get_flash,    _cb_cmd_error,
 };
 
-const char const *glcdidstrings[] = {
+static const char const *glcdidstrings[] = {
     "GLCD_DISP_1", "GLCD_DISP_2", "GLCD_DISP_3", "GLCD_DISP_4", "GLCD_DISP_5",
     "GLCD_DISP_6", "GLCD_DISP_7", "GLCD_DISP_8", "GLCD_DISP_9", "GLCD_DISP_MAX",
 };
@@ -75,63 +66,19 @@ const char const *glcdidstrings[] = {
 static uint32_t flash_size = 0;
 static uint32_t sector_size = 0;
 
-anykey_action_t cmdstr_to_action(char *cmd)
+static anykey_action_t _argp_cmdstr_to_action(char *cmd)
 {
-  if (strcmp(cmdstrings[ANYKEY_CMD_SET_LAYER], cmd) == 0) return ANYKEY_CMD_SET_LAYER;
-  if (strcmp(cmdstrings[ANYKEY_CMD_GET_LAYER], cmd) == 0) return ANYKEY_CMD_GET_LAYER;
-  if (strcmp(cmdstrings[ANYKEY_CMD_SET_CONTRAST], cmd) == 0) return ANYKEY_CMD_SET_CONTRAST;
-  if (strcmp(cmdstrings[ANYKEY_CMD_GET_CONTRAST], cmd) == 0) return ANYKEY_CMD_GET_CONTRAST;
-  if (strcmp(cmdstrings[ANYKEY_CMD_GET_FLASH_INFO], cmd) == 0) return ANYKEY_CMD_GET_FLASH_INFO;
-  if (strcmp(cmdstrings[ANYKEY_CMD_SET_FALSH], cmd) == 0) return ANYKEY_CMD_SET_FALSH;
-  if (strcmp(cmdstrings[ANYKEY_CMD_GET_FALSH], cmd) == 0) return ANYKEY_CMD_GET_FALSH;
+  if (strcmp(_argp_cmd_str[ANYKEY_CMD_SET_LAYER], cmd) == 0) return ANYKEY_CMD_SET_LAYER;
+  if (strcmp(_argp_cmd_str[ANYKEY_CMD_GET_LAYER], cmd) == 0) return ANYKEY_CMD_GET_LAYER;
+  if (strcmp(_argp_cmd_str[ANYKEY_CMD_SET_CONTRAST], cmd) == 0) return ANYKEY_CMD_SET_CONTRAST;
+  if (strcmp(_argp_cmd_str[ANYKEY_CMD_GET_CONTRAST], cmd) == 0) return ANYKEY_CMD_GET_CONTRAST;
+  if (strcmp(_argp_cmd_str[ANYKEY_CMD_GET_FLASH_INFO], cmd) == 0) return ANYKEY_CMD_GET_FLASH_INFO;
+  if (strcmp(_argp_cmd_str[ANYKEY_CMD_SET_FALSH], cmd) == 0) return ANYKEY_CMD_SET_FALSH;
+  if (strcmp(_argp_cmd_str[ANYKEY_CMD_GET_FALSH], cmd) == 0) return ANYKEY_CMD_GET_FALSH;
   return ANYKEY_CMD_ERR;
 }
 
-int send_buffer(int fd, uint8_t *buf, cli_args_t *args)
-{
-  /*
-   * buf[0] is not used for actual payload according to:
-   * https://www.kernel.org/doc/html/latest/hid/hidraw.html
-   */
-  int res = write(fd, buf, USB_HID_RAW_EPSIZE + 1);
-
-  if (res < 0)
-  {
-    char err[64];
-    sprintf(err, "write() error: %d\n", errno);
-    perror(err);
-  }
-  else
-  {
-    if (args->v)
-    {
-      printf("write() wrote %d bytes\n", (res - 1));
-    }
-  }
-  return res;
-}
-
-int recv_buffer(int fd, uint8_t *buf, cli_args_t *args)
-{
-  int res = read(fd, buf, USB_HID_RAW_EPSIZE);
-
-  if (res < 0)
-  {
-    char err[64];
-    sprintf(err, "read() error: %d\n", errno);
-    perror(err);
-  }
-  else
-  {
-    if (args->v)
-    {
-      printf("read() read %d bytes\n", res);
-    }
-  }
-  return res;
-}
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
+static error_t _argp_parser(int key, char *arg, struct argp_state *state)
 {
   cli_args_t *arguments = state->input;
 
@@ -141,7 +88,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
       arguments->D = arg;
       break;
     case 'C':
-      arguments->C = cmdstr_to_action(arg);
+      arguments->C = _argp_cmdstr_to_action(arg);
       break;
     case 'l':
       arguments->l = arg;
@@ -175,24 +122,68 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
   return 0;
 }
 
-void req_printf(anykey_cmd_t cmd, char *params, cli_args_t *args)
+static int _hidraw_send_buffer(int fd, uint8_t *buf, cli_args_t *args)
+{
+  /*
+   * buf[0] is not used for actual payload according to:
+   * https://www.kernel.org/doc/html/latest/hid/hidraw.html
+   */
+  int res = write(fd, buf, USB_HID_RAW_EPSIZE + 1);
+
+  if (res < 0)
+  {
+    char err[64];
+    sprintf(err, "write() error: %d\n", errno);
+    perror(err);
+  }
+  else
+  {
+    if (args->v)
+    {
+      printf("write() wrote %d bytes\n", (res - 1));
+    }
+  }
+  return res;
+}
+
+static int _hidraw_recv_buffer(int fd, uint8_t *buf, cli_args_t *args)
+{
+  int res = read(fd, buf, USB_HID_RAW_EPSIZE);
+
+  if (res < 0)
+  {
+    char err[64];
+    sprintf(err, "read() error: %d\n", errno);
+    perror(err);
+  }
+  else
+  {
+    if (args->v)
+    {
+      printf("read() read %d bytes\n", res);
+    }
+  }
+  return res;
+}
+
+static void _out_req_printf(anykey_cmd_t cmd, char *params, cli_args_t *args)
 {
   if (!args->q)
   {
-    printf("Send: %s %s\n", cmdstrings[cmd], params);
+    printf("Send: %s %s\n", _argp_cmd_str[cmd], params);
   }
 }
 
-void resp_printf(anykey_cmd_t cmd, char *params, cli_args_t *args)
+static void _out_resp_printf(anykey_cmd_t cmd, char *params, cli_args_t *args)
 {
   if (!args->q)
   {
-    printf("Recv: %s %s\n", cmdstrings[cmd], params);
+    printf("Recv: %s %s\n", _argp_cmd_str[cmd], params);
   }
 }
 
-void sprintf_buffer(uint8_t *dst, const char *fmt, uint8_t *src, uint32_t size, const char *start,
-                    const char *stop)
+static void _out_sprintf_buffer(uint8_t *dst, const char *fmt, uint8_t *src, uint32_t size,
+                                const char *start, const char *stop)
 {
   uint32_t i = 0;
 
@@ -204,7 +195,7 @@ void sprintf_buffer(uint8_t *dst, const char *fmt, uint8_t *src, uint32_t size, 
   sprintf(dst, "%s%s", dst, stop);
 }
 
-void set_layer(int fd, uint8_t *buf, cli_args_t *args)
+static void _cb_set_layer(int fd, uint8_t *buf, cli_args_t *args)
 {
   anykey_cmd_set_layer_req_t *req = (anykey_cmd_set_layer_req_t *)&buf[1];
   if (args->l == NULL)
@@ -215,31 +206,31 @@ void set_layer(int fd, uint8_t *buf, cli_args_t *args)
 
   req->cmd = args->C;
   memcpy(req->name, args->l, strlen(args->l));
-  req_printf(req->cmd, req->name, args);
-  send_buffer(fd, buf, args);
+  _out_req_printf(req->cmd, req->name, args);
+  _hidraw_send_buffer(fd, buf, args);
 }
 
-void get_layer(int fd, uint8_t *buf, cli_args_t *args)
+static void _cb_get_layer(int fd, uint8_t *buf, cli_args_t *args)
 {
   anykey_cmd_get_layer_req_t *req = (anykey_cmd_get_layer_req_t *)&buf[1];
   anykey_cmd_get_layer_resp_t *resp = (anykey_cmd_get_layer_resp_t *)buf;
 
   req->cmd = args->C;
 
-  req_printf(req->cmd, "\0", args);
-  int res = send_buffer(fd, buf, args);
+  _out_req_printf(req->cmd, "\0", args);
+  int res = _hidraw_send_buffer(fd, buf, args);
 
   if (res > 0)
   {
-    res = recv_buffer(fd, buf, args);
+    res = _hidraw_recv_buffer(fd, buf, args);
     if (res > 0)
     {
-      resp_printf(resp->cmd, resp->name, args);
+      _out_resp_printf(resp->cmd, resp->name, args);
     }
   }
 }
 
-void set_contrast(int fd, uint8_t *buf, cli_args_t *args)
+static void _cb_set_contrast(int fd, uint8_t *buf, cli_args_t *args)
 {
   anykey_cmd_set_contrast_req_t *req = (anykey_cmd_set_contrast_req_t *)&buf[1];
   uint8_t i = 0;
@@ -254,11 +245,11 @@ void set_contrast(int fd, uint8_t *buf, cli_args_t *args)
     sprintf(params_printf, "%s %d", params_printf, req->contrast[i]);
   }
 
-  req_printf(req->cmd, params_printf, args);
-  send_buffer(fd, buf, args);
+  _out_req_printf(req->cmd, params_printf, args);
+  _hidraw_send_buffer(fd, buf, args);
 }
 
-void get_contrast(int fd, uint8_t *buf, cli_args_t *args)
+static void _cb_get_contrast(int fd, uint8_t *buf, cli_args_t *args)
 {
   anykey_cmd_get_contrast_req_t *req = (anykey_cmd_get_contrast_req_t *)&buf[1];
   anykey_cmd_get_contrast_resp_t *resp = (anykey_cmd_get_contrast_resp_t *)buf;
@@ -269,12 +260,12 @@ void get_contrast(int fd, uint8_t *buf, cli_args_t *args)
   req->display = args->d;
   sprintf(params_printf, "%s", glcdidstrings[args->d]);
 
-  req_printf(req->cmd, params_printf, args);
-  int res = send_buffer(fd, buf, args);
+  _out_req_printf(req->cmd, params_printf, args);
+  int res = _hidraw_send_buffer(fd, buf, args);
 
   if (res > 0)
   {
-    res = recv_buffer(fd, buf, args);
+    res = _hidraw_recv_buffer(fd, buf, args);
     if (res > 0)
     {
       params_printf[0] = '\0';
@@ -282,12 +273,12 @@ void get_contrast(int fd, uint8_t *buf, cli_args_t *args)
       {
         sprintf(params_printf, "%s %d", params_printf, resp->contrast[i]);
       }
-      resp_printf(resp->cmd, params_printf, args);
+      _out_resp_printf(resp->cmd, params_printf, args);
     }
   }
 }
 
-void get_flash_info(int fd, uint8_t *buf, cli_args_t *args)
+void _cb_get_flash_info(int fd, uint8_t *buf, cli_args_t *args)
 {
   anykey_cmd_get_flash_info_req_t *req = (anykey_cmd_get_flash_info_req_t *)&buf[1];
   anykey_cmd_get_flash_info_resp_t *resp = (anykey_cmd_get_flash_info_resp_t *)buf;
@@ -295,24 +286,24 @@ void get_flash_info(int fd, uint8_t *buf, cli_args_t *args)
 
   req->cmd = args->C;
 
-  req_printf(req->cmd, "\0", args);
-  int res = send_buffer(fd, buf, args);
+  _out_req_printf(req->cmd, "\0", args);
+  int res = _hidraw_send_buffer(fd, buf, args);
 
   if (res > 0)
   {
-    res = recv_buffer(fd, buf, args);
+    res = _hidraw_recv_buffer(fd, buf, args);
     if (res > 0)
     {
       sprintf(params_printf, "Flash size: %d, Sector size: %d", resp->flash_size,
               resp->sector_size);
-      resp_printf(resp->cmd, params_printf, args);
+      _out_resp_printf(resp->cmd, params_printf, args);
       flash_size = resp->flash_size;
       sector_size = resp->sector_size;
     }
   }
 }
 
-void set_flash(int fd, uint8_t *buf, cli_args_t *args)
+static void _cb_set_flash(int fd, uint8_t *buf, cli_args_t *args)
 {
   anykey_cmd_set_flash_req_t *req = (anykey_cmd_set_flash_req_t *)&buf[1];
   anykey_cmd_set_flash_resp_t *resp = (anykey_cmd_set_flash_resp_t *)buf;
@@ -320,7 +311,7 @@ void set_flash(int fd, uint8_t *buf, cli_args_t *args)
   cli_args_t dummy_args = {.C = ANYKEY_CMD_GET_FLASH_INFO, .v = args->v, .q = args->q};
   char params_printf[256];
 
-  get_flash_info(fd, buf, &dummy_args);
+  _cb_get_flash_info(fd, buf, &dummy_args);
 
   if (flash_size && sector_size)
   {
@@ -355,17 +346,17 @@ void set_flash(int fd, uint8_t *buf, cli_args_t *args)
         {
           sprintf(params_printf, "%s, Block %d, Size %d, Final %d, Payload: ", params_printf,
                   req->block_cnt, req->block_size, req->final_block);
-          sprintf_buffer(params_printf, "%s %02X", req->buffer, req->block_size, "[", " ]");
+          _out_sprintf_buffer(params_printf, "%s %02X", req->buffer, req->block_size, "[", " ]");
         }
         if (!req->block_cnt || args->v)
         {
-          req_printf(req->cmd, params_printf, args);
+          _out_req_printf(req->cmd, params_printf, args);
         }
 
-        int res = send_buffer(fd, buf, args);
+        int res = _hidraw_send_buffer(fd, buf, args);
         if (res > 0)
         {
-          res = recv_buffer(fd, buf, args);
+          res = _hidraw_recv_buffer(fd, buf, args);
           if (res > 0)
           {
             if (resp->sector != i || resp->block_cnt != block_cnt ||
@@ -383,7 +374,7 @@ void set_flash(int fd, uint8_t *buf, cli_args_t *args)
             }
             if (!resp->block_cnt || args->v)
             {
-              resp_printf(resp->cmd, params_printf, args);
+              _out_resp_printf(resp->cmd, params_printf, args);
             }
           }
         }
@@ -394,7 +385,7 @@ void set_flash(int fd, uint8_t *buf, cli_args_t *args)
   }
 }
 
-void get_flash(int fd, uint8_t *buf, cli_args_t *args)
+static void _cb_get_flash(int fd, uint8_t *buf, cli_args_t *args)
 {
   anykey_cmd_get_flash_req_t *req = (anykey_cmd_get_flash_req_t *)&buf[1];
   anykey_cmd_get_flash_resp_t *resp = (anykey_cmd_get_flash_resp_t *)buf;
@@ -402,7 +393,7 @@ void get_flash(int fd, uint8_t *buf, cli_args_t *args)
   cli_args_t dummy_args = {.C = ANYKEY_CMD_GET_FLASH_INFO, .v = args->v, .q = args->q};
   char params_printf[256];
 
-  get_flash_info(fd, buf, &dummy_args);
+  _cb_get_flash_info(fd, buf, &dummy_args);
 
   if (flash_size && sector_size)
   {
@@ -419,8 +410,8 @@ void get_flash(int fd, uint8_t *buf, cli_args_t *args)
       req->sector = i;
 
       sprintf(params_printf, "Sector %d", req->sector);
-      req_printf(req->cmd, params_printf, args);
-      int res = send_buffer(fd, buf, args);
+      _out_req_printf(req->cmd, params_printf, args);
+      int res = _hidraw_send_buffer(fd, buf, args);
 
       if (res > 0)
       {
@@ -428,7 +419,7 @@ void get_flash(int fd, uint8_t *buf, cli_args_t *args)
         do
         {
           uint32_t n = 0;
-          res = recv_buffer(fd, buf, args);
+          res = _hidraw_recv_buffer(fd, buf, args);
           if (res > 0)
           {
             memcpy(&sector[sector_idx], resp->buffer, resp->block_size);
@@ -438,11 +429,12 @@ void get_flash(int fd, uint8_t *buf, cli_args_t *args)
             {
               sprintf(params_printf, "%s, Block %d, Size %d, Final %d, Payload: ", params_printf,
                       resp->block_cnt, resp->block_size, resp->final_block);
-              sprintf_buffer(params_printf, "%s %02X", resp->buffer, resp->block_size, "[", " ]");
+              _out_sprintf_buffer(params_printf, "%s %02X", resp->buffer, resp->block_size, "[",
+                                  " ]");
             }
             if (resp->final_block || args->v)
             {
-              resp_printf(resp->cmd, params_printf, args);
+              _out_resp_printf(resp->cmd, params_printf, args);
             }
           }
         } while (!resp->final_block && res > 0);
@@ -455,7 +447,7 @@ void get_flash(int fd, uint8_t *buf, cli_args_t *args)
   }
 }
 
-void cmd_error(int fd, uint8_t *buf, cli_args_t *args)
+static void _cb_cmd_error(int fd, uint8_t *buf, cli_args_t *args)
 {
   (void)fd;
   (void)buf;
@@ -465,7 +457,7 @@ void cmd_error(int fd, uint8_t *buf, cli_args_t *args)
   char params_printf[256];
   for (i = 0; i < ANYKEY_CMD_ERR; i++)
   {
-    sprintf(params_printf, "  %s\n", cmdstrings[i]);
+    sprintf(params_printf, "  %s\n", _argp_cmd_str[i]);
     perror(params_printf);
   }
 }
@@ -487,7 +479,7 @@ int main(int argc, char **argv)
       .q = 0,
   };
 
-  argp_parse(&argp, argc, argv, 0, 0, &arguments);
+  argp_parse(&_argp, argc, argv, 0, 0, &arguments);
 
   if (arguments.D == NULL)
   {
