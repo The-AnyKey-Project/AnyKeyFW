@@ -44,6 +44,7 @@
 #include "cmd/hal/flash_storage_cmd.h"
 #include "cmd/hal/glcd_cmd.h"
 #include "cmd/hal/keypad_cmd.h"
+#include "cmd/hal/led_cmd.h"
 #include "cmd/hal/usb_cmd.h"
 
 #if defined(USE_CMD_SHELL)
@@ -62,6 +63,7 @@ static const ShellCommand _cmd_shell_cmds[] = {
   FLASH_STORAGE_CMD_LIST,
   GLCD_CMD_LIST,
   KEYPAD_CMD_LIST,
+  LED_CMD_LIST,
   USB_CMD_LIST,
   {NULL, NULL}
 };

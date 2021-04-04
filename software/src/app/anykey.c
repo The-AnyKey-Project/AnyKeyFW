@@ -42,6 +42,7 @@
 #include "api/hal/flash_storage.h"
 #include "api/hal/glcd.h"
 #include "api/hal/keypad.h"
+#include "api/hal/led.h"
 #include "api/hal/usb.h"
 #include <assert.h>
 #include <string.h>
@@ -595,6 +596,7 @@ void anykey_init(void)
   flash_storage_init();
   glcd_init();
   keypad_init();
+  led_init();
   usb_init();
 
 #if defined(USE_CMD_SHELL)

@@ -39,7 +39,6 @@
  * Include dependencies
  */
 #include <string.h>
-
 #include "api/app/anykey.h"
 
 /*

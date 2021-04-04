@@ -196,6 +196,7 @@ CSRC = $(ALLCSRC) \
        src/hal/flash_storage.c \
        src/hal/glcd.c \
        src/hal/keypad.c \
+       src/hal/led.c \
        src/hal/usb.c \
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global
