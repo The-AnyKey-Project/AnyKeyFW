@@ -48,7 +48,8 @@
 static void _led_init_hal(void);
 static void _led_init_module(void);
 static void _led_set_led_bitfield(led_rgb_t* src, uint16_t id);
-static void _led_rgb_to_hsv(led_hsv_t* dest, led_rgb_t* src);
+static void _led_set_led_bitfield_all(led_rgb_t* src);
+static void _led_hsv_to_rbg(led_hsv_t* hsv, led_rgb_t* rgb);
 
 /*
  * Static variables
@@ -68,11 +69,11 @@ static PWMConfig _led_pwm_pwmd_cfg = {
 static led_bitfield_t _led_bit_buffer[LED_BIT_BUFFER_SIZE];
 static const stm32_dma_stream_t* _led_dma_stream = NULL;
 static led_animation_t _led_animation = {
-    .type = LED_ANIMATION_PULSE,
+    .type = LED_ANIMATION_NONE,
     .pulse =
         {
-            .color = {.r = 0x40, .g = 0x00, .b = 0x40},
-            .perdiod = 1000,
+            .color = {.h = 0x40, .s = 0x40, .v = 0x40},
+            .period = 2000,
         },
 };
 static uint8_t _led_animation_dirty = 1;
@@ -88,15 +89,11 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
 {
   (void)arg;
 
-  led_hsv_t pulse_led;
-  uint32_t pulse_period;
-  float pulse_increment;
-
-  led_hsv_t rainbow_leds[LED_NUMBER];
-  uint32_t rainbow_period;
+  //  led_hsv_t rainbow_leds[LED_NUMBER];
 
   uint32_t cycle = 0;
-  uint8_t i = 0;
+  uint32_t cycle_period = 0;
+  led_rgb_t led;
 
   chRegSetThreadName("led_animation_th");
 
@@ -108,19 +105,20 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
       switch (_led_animation.type)
       {
         case LED_ANIMATION_STATIC:
-          for (i = 0; i < LED_NUMBER; i++)
-          {
-            _led_set_led_bitfield(&_led_animation.static_color.color, i);
-          }
+          _led_set_led_bitfield_all(&_led_animation.static_color.color);
           break;
         case LED_ANIMATION_PULSE:
-          _led_rgb_to_hsv(&pulse_led, &_led_animation.pulse.color);
-          for (i = 0; i < LED_NUMBER; i++)
-          {
-            _led_set_led_bitfield(&pulse_led, i);
-          }
+          cycle = 0;
+          cycle_period = _led_animation.pulse.period / LED_ANIMATION_MAIN_THREAD_P_MS;
+          led.r = 0;
+          led.g = 0;
+          led.b = 0;
+          _led_set_led_bitfield_all(&led);
           break;
         case LED_ANIMATION_RAINBOW:
+          cycle = 0;
+          cycle_period = _led_animation.rainbow.period / LED_ANIMATION_MAIN_THREAD_P_MS;
+          break;
         default:
           break;
       }
@@ -130,9 +128,49 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
     }
     else
     {
+      cycle = (cycle + 1) % cycle_period;
       switch (_led_animation.type)
       {
         case LED_ANIMATION_PULSE:
+        {
+          /*
+           * Calculate led pulsing based on taylor series representation with n=8:
+           * cos x = 1 - x^2/2! + x^4/4! - x^6/6! + x^8/8!
+           * We offset the function to 2 and split the calculation at pi/2
+           *
+           * For x=0...pi:
+           *    cos x = 2 - x^2/2! + x^4/4! - x^6/6! + x^8/8!
+           * For x=pi...2pi:
+           *    cos x = x^2/2! - x^4/4! + x^6/6! - x^8/8!
+           */
+          const uint16_t fak_2 = 2;
+          const uint16_t fak_4 = 24;
+          const uint16_t fak_6 = 720;
+          const uint16_t fak_8 = 40320;
+          const float pi = 3.14159;
+          uint32_t half_cycle = cycle_period / 2;
+          float x = pi * (float)cycle / (float)(half_cycle);
+          x = (x <= pi) ? x : (x - pi);
+          float x_2 = x * x;
+          float x_4 = x_2 * x_2;
+          float x_6 = x_4 * x_2;
+          float x_8 = x_6 * x_2;
+          float frac_2 = x_2 / (float)fak_2;
+          float frac_4 = x_4 / (float)fak_4;
+          float frac_6 = x_6 / (float)fak_6;
+          float frac_8 = x_8 / (float)fak_8;
+          float multiplier = (cycle <= half_cycle) ? (2 - frac_2 + frac_4 - frac_6 + frac_8)
+                                                   : (frac_2 - frac_4 + frac_6 - frac_8);
+          multiplier = multiplier / 2;
+          led_hsv_t pulse_led;
+          pulse_led.h = _led_animation.pulse.color.h;
+          pulse_led.s = _led_animation.pulse.color.s;
+          int16_t v = ((float)_led_animation.pulse.color.v * multiplier);
+          pulse_led.v = (v < 0) ? 0 : (v > 255) ? 255 : v;
+          _led_hsv_to_rbg(&pulse_led, &led);
+          _led_set_led_bitfield_all(&led);
+        }
+        break;
         case LED_ANIMATION_RAINBOW:
         case LED_ANIMATION_STATIC:
         default:
@@ -159,56 +197,65 @@ static void _led_set_led_bitfield(led_rgb_t* src, uint16_t id)
   }
 }
 
-static void _led_rgb_to_hsv(led_hsv_t* dest, led_rgb_t* src)
+static void _led_set_led_bitfield_all(led_rgb_t* src)
+{
+  uint8_t i = 0;
+  for (i = 0; i < LED_NUMBER; i++)
+  {
+    _led_set_led_bitfield(src, i);
+  }
+}
+
+static void _led_hsv_to_rbg(led_hsv_t* hsv, led_rgb_t* rgb)
 {
   uint8_t region, remainder, p, q, t;
 
-  if (dest->S == 0)
+  if (hsv->s == 0)
   {
-    src->r = dest->v;
-    src->g = dest->v;
-    src->b = dest->v;
+    rgb->r = hsv->v;
+    rgb->g = hsv->v;
+    rgb->b = hsv->v;
     return;
   }
 
-  region = dest->h / 43;
-  remainder = (dest->h - (region * 43)) * 6;
+  region = hsv->h / 43;
+  remainder = (hsv->h - (region * 43)) * 6;
 
-  p = (dest->v * (255 - dest->s)) >> 8;
-  q = (dest->v * (255 - ((dest->s * remainder) >> 8))) >> 8;
-  t = (dest->v * (255 - ((dest->s * (255 - remainder)) >> 8))) >> 8;
+  p = (hsv->v * (255 - hsv->s)) >> 8;
+  q = (hsv->v * (255 - ((hsv->s * remainder) >> 8))) >> 8;
+  t = (hsv->v * (255 - ((hsv->s * (255 - remainder)) >> 8))) >> 8;
 
   switch (region)
   {
     case 0:
-      src->r = dest->v;
-      src->g = t;
-      src->b = p;
+      rgb->r = hsv->v;
+      rgb->g = t;
+      rgb->b = p;
       break;
     case 1:
-      src->r = q;
-      src->g = dest->v;
-      src->b = p;
+      rgb->r = q;
+      rgb->g = hsv->v;
+      rgb->b = p;
       break;
     case 2:
-      src->r = p;
-      src->g = dest->v;
-      src->b = t;
+      rgb->r = p;
+      rgb->g = hsv->v;
+      rgb->b = t;
       break;
     case 3:
-      src->r = p;
-      src->g = q;
-      src->b = dest->v;
+      rgb->r = p;
+      rgb->g = q;
+      rgb->b = hsv->v;
       break;
     case 4:
-      src->r = t;
-      src->g = p;
-      src->b = dest->v;
+      rgb->r = t;
+      rgb->g = p;
+      rgb->b = hsv->v;
       break;
     default:
-      src->r = dest->v;
-      src->g = p;
-      src->b = q;
+      rgb->r = hsv->v;
+      rgb->g = p;
+      rgb->b = q;
       break;
   }
 

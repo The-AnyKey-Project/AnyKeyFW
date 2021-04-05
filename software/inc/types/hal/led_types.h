@@ -78,7 +78,8 @@ typedef struct
 
 typedef enum
 {
-  LED_ANIMATION_STATIC = 0,
+  LED_ANIMATION_NONE = 0,
+  LED_ANIMATION_STATIC,
   LED_ANIMATION_PULSE,
   LED_ANIMATION_RAINBOW
 } led_anymation_type_t;
@@ -90,7 +91,7 @@ typedef struct
 
 typedef struct
 {
-  led_rgb_t color;
+  led_hsv_t color;
   uint32_t period;
 } led_animation_pulse_t;
 
