@@ -49,6 +49,7 @@ static void _led_init_hal(void);
 static void _led_init_module(void);
 static void _led_set_led_bitfield(led_rgb_t* src, uint16_t id);
 static void _led_set_led_bitfield_all(led_rgb_t* src);
+static void _led_clear_all(void);
 static void _led_hsv_to_rbg(led_hsv_t* hsv, led_rgb_t* rgb);
 
 /*
@@ -68,14 +69,7 @@ static PWMConfig _led_pwm_pwmd_cfg = {
 };
 static led_bitfield_t _led_bit_buffer[LED_BIT_BUFFER_SIZE];
 static const stm32_dma_stream_t* _led_dma_stream = NULL;
-static led_animation_t _led_animation = {
-    .type = LED_ANIMATION_NONE,
-    .pulse =
-        {
-            .color = {.h = 0x40, .s = 0x40, .v = 0x40},
-            .period = 2000,
-        },
-};
+static led_animation_t _led_animation = {.type = LED_ANIMATION_NONE};
 static uint8_t _led_animation_dirty = 1;
 
 /*
@@ -89,11 +83,13 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
 {
   (void)arg;
 
-  //  led_hsv_t rainbow_leds[LED_NUMBER];
+  float rainbow_leds_h[LED_NUMBER];
 
+  uint32_t i = 0;
   uint32_t cycle = 0;
   uint32_t cycle_period = 0;
-  led_rgb_t led;
+  led_rgb_t led_rgb;
+  led_hsv_t led_hsv;
 
   chRegSetThreadName("led_animation_th");
 
@@ -104,20 +100,25 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
     {
       switch (_led_animation.type)
       {
+        case LED_ANIMATION_NONE:
+          _led_clear_all();
+          break;
         case LED_ANIMATION_STATIC:
           _led_set_led_bitfield_all(&_led_animation.static_color.color);
           break;
         case LED_ANIMATION_PULSE:
           cycle = 0;
           cycle_period = _led_animation.pulse.period / LED_ANIMATION_MAIN_THREAD_P_MS;
-          led.r = 0;
-          led.g = 0;
-          led.b = 0;
-          _led_set_led_bitfield_all(&led);
+          _led_clear_all();
           break;
         case LED_ANIMATION_RAINBOW:
           cycle = 0;
           cycle_period = _led_animation.rainbow.period / LED_ANIMATION_MAIN_THREAD_P_MS;
+          for (i = 0; i < LED_NUMBER; i++)
+          {
+            rainbow_leds_h[i] = (float)(255 * i) / (float)(_led_animation.rainbow.leds_per_rainbow);
+          }
+          _led_clear_all();
           break;
         default:
           break;
@@ -162,16 +163,29 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
           float multiplier = (cycle <= half_cycle) ? (2 - frac_2 + frac_4 - frac_6 + frac_8)
                                                    : (frac_2 - frac_4 + frac_6 - frac_8);
           multiplier = multiplier / 2;
-          led_hsv_t pulse_led;
-          pulse_led.h = _led_animation.pulse.color.h;
-          pulse_led.s = _led_animation.pulse.color.s;
+          led_hsv.h = _led_animation.pulse.color.h;
+          led_hsv.s = _led_animation.pulse.color.s;
           int16_t v = ((float)_led_animation.pulse.color.v * multiplier);
-          pulse_led.v = (v < 0) ? 0 : (v > 255) ? 255 : v;
-          _led_hsv_to_rbg(&pulse_led, &led);
-          _led_set_led_bitfield_all(&led);
+          led_hsv.v = (v < 0) ? 0 : (v > 255) ? 255 : v;
+          _led_hsv_to_rbg(&led_hsv, &led_rgb);
+          _led_set_led_bitfield_all(&led_rgb);
         }
         break;
         case LED_ANIMATION_RAINBOW:
+        {
+          float rainbow_inc = (float)255 * (float)cycle / (float)cycle_period;
+          for (i = 0; i < LED_NUMBER; i++)
+          {
+            uint16_t h = (uint16_t)(rainbow_leds_h[i] + rainbow_inc);
+            led_hsv.h = h % 256;
+            led_hsv.s = _led_animation.rainbow.s;
+            led_hsv.v = _led_animation.rainbow.v;
+            _led_hsv_to_rbg(&led_hsv, &led_rgb);
+            _led_set_led_bitfield(&led_rgb, i);
+          }
+          break;
+        }
+        case LED_ANIMATION_NONE:
         case LED_ANIMATION_STATIC:
         default:
           break;
@@ -204,6 +218,15 @@ static void _led_set_led_bitfield_all(led_rgb_t* src)
   {
     _led_set_led_bitfield(src, i);
   }
+}
+
+static void _led_clear_all(void)
+{
+  led_rgb_t led;
+  led.r = 0;
+  led.g = 0;
+  led.b = 0;
+  _led_set_led_bitfield_all(&led);
 }
 
 static void _led_hsv_to_rbg(led_hsv_t* hsv, led_rgb_t* rgb)

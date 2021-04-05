@@ -98,6 +98,9 @@ typedef struct
 typedef struct
 {
   uint32_t period;
+  uint8_t leds_per_rainbow;
+  uint8_t s;
+  uint8_t v;
 } led_animation_rainbow_t;
 
 typedef struct
