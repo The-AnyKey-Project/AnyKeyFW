@@ -28,5 +28,6 @@
 #include "types/hal/led_types.h"
 
 extern void led_init(void);
+extern void led_set_animation(led_animation_t* animation);
 
 #endif /* INC_API_HAL_LED_H_ */

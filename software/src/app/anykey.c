@@ -284,6 +284,7 @@ static void _anykey_set_layer(anykey_layer_t *layer)
     _anykey_current_layer = layer;
     chSysUnlock();
     glcd_set_displays(layer->display_idx);
+    led_set_animation(&layer->led_animation);
   }
 }
 

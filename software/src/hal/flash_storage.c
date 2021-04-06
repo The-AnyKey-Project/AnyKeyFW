@@ -63,7 +63,7 @@ static uint8_t *_flash_storage_area = NULL;
 static const flash_storage_default_layer_t _flash_storage_default_layer = {
     .flash_header =
         {
-            .crc = 0xA124C0A3,
+            .crc = 0x93606858,
             .version = FLASH_STORAGE_HEADER_VERSION,
             .initial_layer_idx = offsetof(flash_storage_default_layer_t, l1_header),
             .first_layer_idx = offsetof(flash_storage_default_layer_t, l1_header),
@@ -114,6 +114,17 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
                     0,
                     0,
                 },
+            .led_animation =
+                {
+                    .type = LED_ANIMATION_PULSE,
+                    .pulse.color =
+                        {
+                            .h = 0x80,
+                            .s = 0xff,
+                            .v = 0x80,
+                        },
+                    .pulse.period = 4000,
+                },
         },
     .l2_header =
         {
@@ -155,6 +166,14 @@ static const flash_storage_default_layer_t _flash_storage_default_layer = {
                     offsetof(flash_storage_default_layer_t, kr_2),
                     offsetof(flash_storage_default_layer_t, kr_1),
                     offsetof(flash_storage_default_layer_t, kr_0),
+                },
+            .led_animation =
+                {
+                    .type = LED_ANIMATION_RAINBOW,
+                    .rainbow.leds_per_rainbow = LED_NUMBER,
+                    .rainbow.period = 4000,
+                    .rainbow.s = 0xff,
+                    .rainbow.v = 0x80,
                 },
         },
     .l1_name = FLASH_STORAGE_DEFCONFIG_L1_NAME,

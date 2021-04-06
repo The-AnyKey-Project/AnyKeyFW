@@ -47,6 +47,7 @@
  */
 static void _led_init_hal(void);
 static void _led_init_module(void);
+static void _led_get_animation(led_animation_t* dest);
 static void _led_set_led_bitfield(led_rgb_t* src, uint16_t id);
 static void _led_set_led_bitfield_all(led_rgb_t* src);
 static void _led_clear_all(void);
@@ -90,47 +91,52 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
   uint32_t cycle_period = 0;
   led_rgb_t led_rgb;
   led_hsv_t led_hsv;
+  led_animation_t animation;
+  uint8_t dirty = 0;
 
   chRegSetThreadName("led_animation_th");
 
   while (true)
   {
     systime_t time = chVTGetSystemTimeX();
-    if (_led_animation_dirty)
+    _led_get_animation(&animation);
+    chSysLock();
+    dirty = _led_animation_dirty;
+    _led_animation_dirty = 0;
+    chSysUnlock();
+
+    if (dirty)
     {
-      switch (_led_animation.type)
+      switch (animation.type)
       {
         case LED_ANIMATION_NONE:
           _led_clear_all();
           break;
         case LED_ANIMATION_STATIC:
-          _led_set_led_bitfield_all(&_led_animation.static_color.color);
+          _led_set_led_bitfield_all(&animation.static_color.color);
           break;
         case LED_ANIMATION_PULSE:
           cycle = 0;
-          cycle_period = _led_animation.pulse.period / LED_ANIMATION_MAIN_THREAD_P_MS;
+          cycle_period = animation.pulse.period / LED_ANIMATION_MAIN_THREAD_P_MS;
           _led_clear_all();
           break;
         case LED_ANIMATION_RAINBOW:
           cycle = 0;
-          cycle_period = _led_animation.rainbow.period / LED_ANIMATION_MAIN_THREAD_P_MS;
+          cycle_period = animation.rainbow.period / LED_ANIMATION_MAIN_THREAD_P_MS;
           for (i = 0; i < LED_NUMBER; i++)
           {
-            rainbow_leds_h[i] = (float)(255 * i) / (float)(_led_animation.rainbow.leds_per_rainbow);
+            rainbow_leds_h[i] = (float)(255 * i) / (float)(animation.rainbow.leds_per_rainbow);
           }
           _led_clear_all();
           break;
         default:
           break;
       }
-      chSysLock();
-      _led_animation_dirty = 0;
-      chSysUnlock();
     }
     else
     {
       cycle = (cycle + 1) % cycle_period;
-      switch (_led_animation.type)
+      switch (animation.type)
       {
         case LED_ANIMATION_PULSE:
         {
@@ -163,9 +169,9 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
           float multiplier = (cycle <= half_cycle) ? (2 - frac_2 + frac_4 - frac_6 + frac_8)
                                                    : (frac_2 - frac_4 + frac_6 - frac_8);
           multiplier = multiplier / 2;
-          led_hsv.h = _led_animation.pulse.color.h;
-          led_hsv.s = _led_animation.pulse.color.s;
-          int16_t v = ((float)_led_animation.pulse.color.v * multiplier);
+          led_hsv.h = animation.pulse.color.h;
+          led_hsv.s = animation.pulse.color.s;
+          int16_t v = ((float)animation.pulse.color.v * multiplier);
           led_hsv.v = (v < 0) ? 0 : (v > 255) ? 255 : v;
           _led_hsv_to_rbg(&led_hsv, &led_rgb);
           _led_set_led_bitfield_all(&led_rgb);
@@ -178,8 +184,8 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
           {
             uint16_t h = (uint16_t)(rainbow_leds_h[i] + rainbow_inc);
             led_hsv.h = h % 256;
-            led_hsv.s = _led_animation.rainbow.s;
-            led_hsv.v = _led_animation.rainbow.v;
+            led_hsv.s = animation.rainbow.s;
+            led_hsv.v = animation.rainbow.v;
             _led_hsv_to_rbg(&led_hsv, &led_rgb);
             _led_set_led_bitfield(&led_rgb, i);
           }
@@ -199,6 +205,13 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
 /*
  * Static helper functions
  */
+static void _led_get_animation(led_animation_t* dest)
+{
+  chSysLock();
+  memcpy(dest, &_led_animation, sizeof(led_animation_t));
+  chSysUnlock();
+}
+
 static void _led_set_led_bitfield(led_rgb_t* src, uint16_t id)
 {
   led_bitfield_t* dest = &_led_bit_buffer[id];
@@ -409,4 +422,12 @@ void led_init(void)
 {
   _led_init_hal();
   _led_init_module();
+}
+
+void led_set_animation(led_animation_t* animation)
+{
+  chSysLock();
+  memcpy(&_led_animation, animation, sizeof(led_animation_t));
+  _led_animation_dirty = 1;
+  chSysUnlock();
 }

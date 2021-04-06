@@ -25,6 +25,7 @@
 #define INC_TYPES_APP_ANYKEY_TYPES_H_
 
 #include "api/hal/glcd.h"
+#include "api/hal/led.h"
 #include "api/hal/usb.h"
 
 /*
@@ -57,6 +58,7 @@ typedef struct _anykey_layer_t
                                                          // actions
   uint32_t key_action_release_idx[ANYKEY_NUMBER_OF_KEYS];  // array of flash storage idx for key
                                                            // release actions
+  led_animation_t led_animation;                           // led animation
 } anykey_layer_t;
 
 typedef struct
