@@ -291,7 +291,6 @@ extern uint32_t __flash1_base__;
 /*
  * Static helper functions
  */
-
 static void _flash_storage_init_hal(void)
 {
   eflStart(&FLASH_STORAGE_DRIVER_HANDLE, NULL);
@@ -426,7 +425,6 @@ void flash_storage_write_default_sh(BaseSequentialStream *chp, int argc, char *a
 /*
  * API functions
  */
-
 void flash_storage_init(void)
 {
   _flash_storage_init_hal();

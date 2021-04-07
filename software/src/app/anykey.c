@@ -83,7 +83,6 @@ static anykey_layer_t *_anykey_current_layer = (anykey_layer_t *)NULL;
 /*
  * Tasks
  */
-
 static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 {
   (void)arg;
@@ -98,12 +97,18 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 
   while (true)
   {
+    /*
+     * Wait for incoming events from keypad module
+     */
     events = chEvtWaitAny(EVENT_MASK(KEYPAD_EVENT_NOTIFIER_BIT));
     if (events & EVENT_MASK(KEYPAD_EVENT_NOTIFIER_BIT))
     {
       keypad_get_sw_events(dest);
       if (_anykey_current_layer)
       {
+        /*
+         * Handle keypad events only if _anykey_current_layer is set
+         */
         for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
         {
           switch (dest[sw_id])
@@ -134,20 +139,42 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
   size_t size = 0;
   anykey_cmd_req_t *req = (anykey_cmd_req_t *)input_buffer;
   anykey_cmd_resp_t *resp = (anykey_cmd_resp_t *)input_buffer;
+
   chRegSetThreadName("anykey_cmd_th");
 
   while (true)
   {
+    /*
+     * Wait for incoming request from raw HID
+     */
     size = usb_hid_raw_receive(input_buffer, USB_HID_RAW_EPSIZE);
 
     if (size)
     {
+      /*
+       * For each received command:
+       *   1. Get possible operands based on req pointer
+       *   2. Perform action
+       *   3. Fill response buffer (optional)
+       *   4. Set send_resp flag (optional)
+       */
       switch (req->raw.cmd)
       {
         case ANYKEY_CMD_SET_LAYER:
+          /*
+           * Received set layer request:
+           *   Get layer pointer from flash module based on its name and set requested layer
+           */
           _anykey_set_layer(flash_storage_get_layer_by_name((char *)req->set_layer.name));
+          /*
+           * No response message
+           */
           break;
         case ANYKEY_CMD_GET_LAYER:
+          /*
+           * Received get layer request:
+           *   Get pointer to current layer name from flash module
+           */
           resp->get_layer.name[0] = '\0';
           if (_anykey_current_layer)
           {
@@ -159,10 +186,18 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
           }
           _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_layer_resp_t),
                                        USB_HID_RAW_EPSIZE);
+          /*
+           * Set response message flag
+           */
           send_resp = 1;
           break;
         case ANYKEY_CMD_SET_CONTRAST:
         {
+          /*
+           * Received set contrast request:
+           *   Set contrast for every requested displays
+           *   (set all displays if GLCD_DISP_MAX is set)
+           */
           uint8_t i = 0;
           for (i = 0; i < GLCD_DISP_MAX; i++)
           {
@@ -171,10 +206,18 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
               glcd_set_contrast(i, req->set_contrast.contrast[i]);
             }
           }
+          /*
+           * No response message
+           */
           break;
         }
         case ANYKEY_CMD_GET_CONTRAST:
         {
+          /*
+           * Received get contrast request
+           *   Read contrast for requested displays from glcd module
+           *   (read and reply all displays if GLCD_DISP_MAX is set)
+           */
           uint8_t i = 0;
           glcd_display_id_t id = req->get_contrast.display;
           for (i = 0; i < GLCD_DISP_MAX; i++)
@@ -184,48 +227,82 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
           }
           _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_contrast_resp_t),
                                        USB_HID_RAW_EPSIZE);
+          /*
+           * Set response message flag
+           */
           send_resp = 1;
           break;
         }
         case ANYKEY_CMD_GET_FLASH_INFO:
         {
+          /*
+           * Received get flash info request
+           *   Read flash info from flash module
+           */
           const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
           resp->get_flash_info.flash_size = FLASH_STORAGE_SIZE;
           resp->get_flash_info.sector_size = desc->sectors_size;
           _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_get_flash_info_resp_t),
                                        USB_HID_RAW_EPSIZE);
+          /*
+           * Set response message flag
+           */
           send_resp = 1;
           break;
         }
         case ANYKEY_CMD_SET_FALSH:
         {
+          /*
+           * Received set flash request
+           *   Receive a flash sector fragment and write sector if requested
+           */
           static uint8_t _anykey_flash_sector_buffer[STM32_FLASH_SECTOR_SIZE];
           static uint16_t _anykey_flash_sector_written = 0;
+          /*
+           * Initialize temporary buffer and block counter on first block
+           */
           if (req->set_flash.block_cnt == 0)
           {
             memset(_anykey_flash_sector_buffer, 0xff, sizeof(_anykey_flash_sector_buffer));
             _anykey_flash_sector_written = 0;
           }
+          /*
+           * Copy received data to temporary buffer
+           */
           memcpy(&_anykey_flash_sector_buffer[_anykey_flash_sector_written], req->set_flash.buffer,
                  req->set_flash.block_size);
           _anykey_flash_sector_written += req->set_flash.block_size;
           if (req->set_flash.final_block)
           {
+            /*
+             * Write received temporary buffer as entire flash sector, when the final block has been
+             * received
+             */
             flash_storage_write_sector(_anykey_flash_sector_buffer, req->set_flash.sector);
           }
           _anykey_fill_response_buffer((uint8_t *)resp, sizeof(anykey_cmd_set_flash_resp_t),
                                        USB_HID_RAW_EPSIZE);
+          /*
+           * Set response message flag
+           */
           send_resp = 1;
           break;
         }
         case ANYKEY_CMD_GET_FALSH:
         {
+          /*
+           * Received get flash request
+           *   Read a flash sector and send it as multiple fragments
+           */
           const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
           uint16_t block_size = sizeof(resp->get_flash.buffer);
           uint16_t block_cnt_max = (desc->sectors_size - 1) / block_size + 1;
           uint16_t residual = desc->sectors_size;
           uint8_t *sector = (uint8_t *)flash_storage_get_pointer_from_offset(req->get_flash.sector *
                                                                              desc->sectors_size);
+          /*
+           * Send multiple blocks
+           */
           for (resp->get_flash.block_cnt = 0; resp->get_flash.block_cnt < block_cnt_max;
                resp->get_flash.block_cnt++)
           {
@@ -234,9 +311,11 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
             resp->get_flash.final_block = (residual) ? 0 : 1;
             memcpy(resp->get_flash.buffer, &sector[block_size * resp->get_flash.block_cnt],
                    resp->get_flash.block_size);
+            /*
+             * Send response message directly
+             */
             usb_hid_raw_send((uint8_t *)resp, USB_HID_RAW_EPSIZE);
           }
-
           break;
         }
         default:
@@ -244,6 +323,9 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
       }
       if (send_resp)
       {
+        /*
+         * Send response message
+         */
         usb_hid_raw_send((uint8_t *)resp, USB_HID_RAW_EPSIZE);
       }
     }
@@ -253,20 +335,32 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 /*
  * Static helper functions
  */
-
 static void _anykey_init_hal(void)
 {
+  /*
+   * Disable JTAG pins
+   * if defined(USE_STLINK)
+   *    Disable NJTRST, allow SWD
+   * else
+   *    Disable SWD, use all pins as GPIO
+   */
 #if defined(USE_STLINK)
-  AFIO->MAPR |= (2 << 24);  // Disable NJTRST, allow SWD
+  AFIO->MAPR |= (2 << 24);
 #else
-  AFIO->MAPR |= (4 << 24);  // Disable SWD, use all pins as GPIO
+  AFIO->MAPR |= (4 << 24);
 #endif
 }
 
 static void _anykey_init_module(void)
 {
+  /*
+   * Set initial layer
+   */
   _anykey_set_layer(flash_storage_get_initial_layer());
 
+  /*
+   * Create application tasks for key and command handling
+   */
   chThdCreateStatic(_anykey_key_stack, sizeof(_anykey_key_stack), ANYKEY_KEY_THREAD_PRIO,
                     _anykey_key_thread, NULL);
   chThdCreateStatic(_anykey_cmd_stack, sizeof(_anykey_cmd_stack), ANYKEY_CMD_THREAD_PRIO,
@@ -280,6 +374,9 @@ static void _anykey_fill_response_buffer(uint8_t *buffer, uint16_t already_fille
 
 static void _anykey_set_layer(anykey_layer_t *layer)
 {
+  /*
+   * Set new layer and update dependent modules
+   */
   if (layer)
   {
     chSysLock();
@@ -293,10 +390,20 @@ static void _anykey_set_layer(anykey_layer_t *layer)
 static void _anykey_handle_action(anykey_action_list_t *action_list)
 {
   uint8_t i = 0;
+  /*
+   * Loop over action_list
+   */
   if (action_list)
   {
     while (i < action_list->length)
     {
+      /*
+       * For each action list entry
+       *   1. Get possible operands based on anykey_action typedef
+       *   2. Perform action
+       *   3. Adjust buffer index i to the next action
+       *      based on the size of the current entry
+       */
       switch (action_list->actions[i])
       {
         case ANYKEY_ACTION_KEY_PRESS:
@@ -328,12 +435,16 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
           break;
         }
         case ANYKEY_ACTION_NEXT_LAYER:
-          // no parameter -> no cast needed
+          /*
+           * No parameter -> no cast needed
+           */
           _anykey_set_layer(flash_storage_get_pointer_from_idx(_anykey_current_layer->next_idx));
           i += sizeof(anykey_action_layer_t);
           break;
         case ANYKEY_ACTION_PREV_LAYER:
-          // no parameter -> no cast needed
+          /*
+           * No parameter -> no cast needed
+           */
           _anykey_set_layer(flash_storage_get_pointer_from_idx(_anykey_current_layer->prev_idx));
           i += sizeof(anykey_action_layer_t);
           break;
@@ -341,6 +452,9 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
         {
           anykey_action_contrast_t *action = (anykey_action_contrast_t *)&(action_list->actions[i]);
           uint8_t sw_id = 0;
+          /*
+           * For each Display, get current contrast, adjust and set new value
+           */
           for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
           {
             int16_t new_value = (int16_t)glcd_get_contrast(sw_id);
@@ -462,6 +576,7 @@ static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t
   }
 }
 #endif
+
 /*
  * Callback functions
  */
@@ -584,7 +699,6 @@ void anykey_set_layer_sh(BaseSequentialStream *chp, int argc, char *argv[])
 /*
  * API functions
  */
-
 void anykey_init(void)
 {
   /*
