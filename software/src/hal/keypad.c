@@ -75,15 +75,17 @@ event_source_t keypad_event_handle;
 static __attribute__((noreturn)) THD_FUNCTION(_keypad_poll_thread, arg)
 {
   (void)arg;
+  systime_t time = 0;
+  uint8_t sw_id = 0;
+  uint32_t pin_state = 0;
+  uint8_t events_dirty = 0;
 
   chRegSetThreadName("keypad_poll_th");
 
   while (true)
   {
-    systime_t time = chVTGetSystemTimeX();
-    uint8_t sw_id = 0;
-    uint32_t pin_state = 0;
-    uint8_t events_dirty = 0;
+    time = chVTGetSystemTimeX();
+
     for (sw_id = 0; sw_id < KEYPAD_SW_COUNT; sw_id++)
     {
       if (_keypad_sw_list[sw_id].delay == 0)

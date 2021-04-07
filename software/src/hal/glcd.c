@@ -90,24 +90,28 @@ static uint32_t _glcd_display_cs_lines[GLCD_DISP_MAX] = {
 static __attribute__((noreturn)) THD_FUNCTION(_glcd_update_thread, arg)
 {
   (void)arg;
+  systime_t time = 0;
+  uint8_t dirty = 0;
+  uint8_t display = 0;
 
   chRegSetThreadName("glcd_update_th");
 
   while (true)
   {
-    systime_t time = chVTGetSystemTimeX();
+    time = chVTGetSystemTimeX();
 
-    if (_glcd_display_buffers_dirty)
+    chSysLock();
+    dirty = _glcd_display_buffers_dirty;
+    _glcd_display_buffers_dirty = 0;
+    chSysUnlock();
+
+    if (dirty)
     {
-      uint8_t display = 0;
       for (display = 0; display < GLCD_DISP_MAX; display++)
       {
         _glcd_draw_bitmap(display,
                           flash_storage_get_pointer_from_idx(_glcd_display_buffers[display]));
       }
-      chSysLock();
-      _glcd_display_buffers_dirty = 0;
-      chSysUnlock();
     }
     chThdSleepUntilWindowed(time, time + TIME_MS2I(GLCD_UPDATE_THREAD_P_MS));
   }

@@ -87,20 +87,21 @@ static anykey_layer_t *_anykey_current_layer = (anykey_layer_t *)NULL;
 static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 {
   (void)arg;
+  eventmask_t events = 0;
+  event_listener_t event_listener;
+  keypad_event_t dest[ANYKEY_NUMBER_OF_KEYS];
+  uint8_t sw_id = 0;
 
   chRegSetThreadName("anykey_key_th");
 
-  event_listener_t event_listener;
   chEvtRegister(&keypad_event_handle, &event_listener, KEYPAD_EVENT_NOTIFIER_BIT);
 
   while (true)
   {
-    eventmask_t events = chEvtWaitAny(EVENT_MASK(KEYPAD_EVENT_NOTIFIER_BIT));
+    events = chEvtWaitAny(EVENT_MASK(KEYPAD_EVENT_NOTIFIER_BIT));
     if (events & EVENT_MASK(KEYPAD_EVENT_NOTIFIER_BIT))
     {
-      keypad_event_t dest[ANYKEY_NUMBER_OF_KEYS];
       keypad_get_sw_events(dest);
-      uint8_t sw_id = 0;
       if (_anykey_current_layer)
       {
         for (sw_id = 0; sw_id < ANYKEY_NUMBER_OF_KEYS; sw_id++)
@@ -128,16 +129,17 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
 static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
 {
   (void)arg;
-
+  uint8_t input_buffer[USB_HID_RAW_EPSIZE];
+  uint8_t send_resp = 0;
+  size_t size = 0;
+  anykey_cmd_req_t *req = (anykey_cmd_req_t *)input_buffer;
+  anykey_cmd_resp_t *resp = (anykey_cmd_resp_t *)input_buffer;
   chRegSetThreadName("anykey_cmd_th");
 
   while (true)
   {
-    uint8_t input_buffer[USB_HID_RAW_EPSIZE];
-    uint8_t send_resp = 0;
-    size_t size = usb_hid_raw_receive(input_buffer, USB_HID_RAW_EPSIZE);
-    anykey_cmd_req_t *req = (anykey_cmd_req_t *)input_buffer;
-    anykey_cmd_resp_t *resp = (anykey_cmd_resp_t *)input_buffer;
+    size = usb_hid_raw_receive(input_buffer, USB_HID_RAW_EPSIZE);
+
     if (size)
     {
       switch (req->raw.cmd)

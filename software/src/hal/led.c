@@ -83,9 +83,7 @@ static uint8_t _led_animation_dirty = 1;
 static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
 {
   (void)arg;
-
-  float rainbow_leds_h[LED_NUMBER];
-
+  systime_t time = 0;
   uint32_t i = 0;
   uint32_t cycle = 0;
   uint32_t cycle_period = 0;
@@ -93,12 +91,13 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
   led_hsv_t led_hsv;
   led_animation_t animation;
   uint8_t dirty = 0;
+  float rainbow_leds_h[LED_NUMBER];
 
   chRegSetThreadName("led_animation_th");
 
   while (true)
   {
-    systime_t time = chVTGetSystemTimeX();
+    time = chVTGetSystemTimeX();
     _led_get_animation(&animation);
     chSysLock();
     dirty = _led_animation_dirty;
