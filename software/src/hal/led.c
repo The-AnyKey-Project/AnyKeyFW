@@ -99,6 +99,11 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
   {
     time = chVTGetSystemTimeX();
     _led_get_animation(&animation);
+
+    /*
+     * Use critical section to provide
+     * consistent data
+     */
     chSysLock();
     dirty = _led_animation_dirty;
     _led_animation_dirty = 0;
@@ -112,14 +117,23 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
           _led_clear_all();
           break;
         case LED_ANIMATION_STATIC:
+          /*
+           * Set color once, no animation settings needed
+           */
           _led_set_led_bitfield_all(&animation.static_color.color);
           break;
         case LED_ANIMATION_PULSE:
+          /*
+           * Set cycle period to define pulsing speed
+           */
           cycle = 0;
           cycle_period = animation.pulse.period / LED_ANIMATION_MAIN_THREAD_P_MS;
           _led_clear_all();
           break;
         case LED_ANIMATION_RAINBOW:
+          /*
+           * Calculate H offset values for rainbow pattern
+           */
           cycle = 0;
           cycle_period = animation.rainbow.period / LED_ANIMATION_MAIN_THREAD_P_MS;
           for (i = 0; i < LED_NUMBER; i++)
@@ -178,6 +192,10 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
         break;
         case LED_ANIMATION_RAINBOW:
         {
+          /*
+           * Move the H value (rotate) of each LED by a step size, based
+           * on the given cycle and cycle period
+           */
           float rainbow_inc = (float)255 * (float)cycle / (float)cycle_period;
           for (i = 0; i < LED_NUMBER; i++)
           {
@@ -206,6 +224,10 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
  */
 static void _led_get_animation(led_animation_t* dest)
 {
+  /*
+   * Use critical section to provide
+   * consistent data
+   */
   chSysLock();
   memcpy(dest, &_led_animation, sizeof(led_animation_t));
   chSysUnlock();
@@ -215,6 +237,10 @@ static void _led_set_led_bitfield(led_rgb_t* src, uint16_t id)
 {
   led_bitfield_t* dest = &_led_bit_buffer[id];
   uint8_t i = 0;
+  /*
+   * Loop bitwise and set the corresponding CCR value for
+   * 0 (0.35 µs) or 1 (0.9µs) to the bit buffer array.
+   */
   for (i = 0; i < 8; i++)
   {
     dest->r[i] = (src->r & (1 << (8 - i))) ? LED_WS2812B_ONE : LED_WS2812B_ZERO;
@@ -225,6 +251,9 @@ static void _led_set_led_bitfield(led_rgb_t* src, uint16_t id)
 
 static void _led_set_led_bitfield_all(led_rgb_t* src)
 {
+  /*
+   * Loop over all LEDs an set the corresponding values
+   */
   uint8_t i = 0;
   for (i = 0; i < LED_NUMBER; i++)
   {
@@ -243,6 +272,11 @@ static void _led_clear_all(void)
 
 static void _led_hsv_to_rbg(led_hsv_t* hsv, led_rgb_t* rgb)
 {
+  /*
+   * Magic conversion from HSV -> RGB. Found a similar
+   * version somewhere in the internet, don't ask me
+   * what the code is doing
+   */
   uint8_t region, remainder, p, q, t;
 
   if (hsv->s == 0)
@@ -299,36 +333,55 @@ static void _led_hsv_to_rbg(led_hsv_t* hsv, led_rgb_t* rgb)
 
 static void _led_init_hal(void)
 {
+  /*
+   * Initialize PWM driver, enable output and PWM driver
+   */
   pwmStart(LED_PWM_TIMER_DRIVER, &_led_pwm_pwmd_cfg);
   palSetLineMode(LED_PWM_OUTPUT_LINE, PAL_MODE_STM32_ALTERNATE_PUSHPULL);
   pwmEnableChannel(LED_PWM_TIMER_DRIVER, (LED_PWM_TIMER_CH - 1), 1);
 
-  // Allocate stream
+  /*
+   * Initialize DMA stream, for automated transfer between
+   * bit buffer and capture compare register (CCR). According to the
+   * default timer configuration, a DMA request is generated when
+   * CCR == CNT. The DMA transfer writes to a shadowed CCR, which
+   * becomes active on timer overrun, setting the new compare value
+   * for the next PWM period.
+   *
+   *   - Allocate DMA stream
+   *   - Set CCR as peripheral address
+   *   - Set memory base address to _led_bit_buffer
+   *   - Set transaction size to sizeof(_led_bit_buffer)
+   *   - Configure DMA transfer
+   *            - Channel, including priority
+   *            - Direction memory -> periphery
+   *            - Source size according to led_dma_transfer_t
+   *            - Target size is half word according to CCR definition
+   *            - Increment memory position after each transfer
+   *            - Circular mode
+   *   - Enable stream
+   */
   _led_dma_stream = dmaStreamAlloc(LED_DMA_STREAM, LED_DMA_IRQ_PRIO, NULL, NULL);
-
-  // Set peripheral address
   dmaStreamSetPeripheral(_led_dma_stream, &(LED_PWM_CCR));
-
-  // Set memory address
   dmaStreamSetMemory0(_led_dma_stream, _led_bit_buffer);
-
-  // set the size of the output buffer
   dmaStreamSetTransactionSize(_led_dma_stream, sizeof(_led_bit_buffer));
-
-  // config BYTE to HWORD transfers, memory to peripheral,
-  // inc source address, fixed dest address,
-  // circular mode, select channel 4
   dmaStreamSetMode(_led_dma_stream, STM32_DMA_CR_PL(LED_DMA_CH_PRIO) | STM32_DMA_CR_PSIZE_HWORD |
                                         led_dma_transfer_t | STM32_DMA_CR_DIR_M2P |
                                         STM32_DMA_CR_MINC | STM32_DMA_CR_CIRC |
                                         STM32_DMA_CR_CHSEL(LED_DMA_CH));
-
   dmaStreamEnable(_led_dma_stream);
 }
 
 static void _led_init_module(void)
 {
+  /*
+   * Initialize bit buffer for PWM signal
+   */
   memset(_led_bit_buffer, 0, sizeof(_led_bit_buffer));
+
+  /*
+   * Create led tasks for animation processing
+   */
   chThdCreateStatic(_led_animation_stack, sizeof(_led_animation_stack), LED_ANIMATION_THREAD_PRIO,
                     _led_animation_thread, NULL);
 }
@@ -425,6 +478,10 @@ void led_init(void)
 
 void led_set_animation(led_animation_t* animation)
 {
+  /*
+   * Use critical section to provide
+   * consistent data
+   */
   chSysLock();
   memcpy(&_led_animation, animation, sizeof(led_animation_t));
   _led_animation_dirty = 1;
