@@ -153,10 +153,10 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
     {
       /*
        * For each received command:
-       *   1. Get possible operands based on req pointer
-       *   2. Perform action
-       *   3. Fill response buffer (optional)
-       *   4. Set send_resp flag (optional)
+       *   - Get possible operands based on req pointer
+       *   - Perform action
+       *   - Fill response buffer (optional)
+       *   - Set send_resp flag (optional)
        */
       switch (req->raw.cmd)
       {
@@ -399,10 +399,10 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
     {
       /*
        * For each action list entry
-       *   1. Get possible operands based on anykey_action typedef
-       *   2. Perform action
-       *   3. Adjust buffer index i to the next action
-       *      based on the size of the current entry
+       *   - Get possible operands based on anykey_action typedef
+       *   - Perform action
+       *   - Adjust buffer index i to the next action
+       *     based on the size of the current entry
        */
       switch (action_list->actions[i])
       {
