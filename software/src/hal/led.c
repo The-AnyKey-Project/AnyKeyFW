@@ -185,7 +185,8 @@ static __attribute__((noreturn)) THD_FUNCTION(_led_animation_thread, arg)
           led_hsv.h = animation.pulse.color.h;
           led_hsv.s = animation.pulse.color.s;
           int16_t v = ((float)animation.pulse.color.v * multiplier);
-          led_hsv.v = (v < 0) ? 0 : (v > 255) ? 255 : v;
+          led_hsv.v = (v < 0) ? 0 : (v > 255) ? 255
+                                              : v;
           _led_hsv_to_rbg(&led_hsv, &led_rgb);
           _led_set_led_bitfield_all(&led_rgb);
         }
@@ -380,7 +381,7 @@ static void _led_init_module(void)
   memset(_led_bit_buffer, 0, sizeof(_led_bit_buffer));
 
   /*
-   * Create led tasks for animation processing
+   * Create led task for animation processing
    */
   chThdCreateStatic(_led_animation_stack, sizeof(_led_animation_stack), LED_ANIMATION_THREAD_PRIO,
                     _led_animation_thread, NULL);
