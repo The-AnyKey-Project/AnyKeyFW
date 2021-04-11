@@ -293,14 +293,31 @@ extern uint32_t __flash1_base__;
  */
 static void _flash_storage_init_hal(void)
 {
+  /*
+   * Initialize flash driver
+   */
   eflStart(&FLASH_STORAGE_DRIVER_HANDLE, NULL);
+
+  /*
+   * Enable and initialize CRC driver.
+   * The hardware module uses CRC-32 (Ethernet)
+   * polynomial: 0x4C11DB7
+   */
   rccEnableCRC(true);
   crcStart(&FLASH_STORAGE_CRC_HANDLE, NULL);
 }
 
 static void _flash_storage_init_module(void)
 {
+  /*
+   * Initialize _flash_storage_area to flash1 section
+   */
   _flash_storage_area = (uint8_t *)&__flash1_base__;
+
+  /*
+   * Calculate and check CRC, overwrite flash with default
+   * configuration if header CRC does not match.
+   */
   uint32_t crc = _flash_storage_get_crc();
   flash_storage_header_t *header = (flash_storage_header_t *)_flash_storage_area;
   if (crc != header->crc)
@@ -317,6 +334,9 @@ static void _flash_storage_write_default_config(void)
   const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
   flash_offset_t flash_offset = (flash_offset_t)_flash_storage_area - (flash_offset_t)desc->address;
 
+  /*
+   * Erase all flash sectors in flash1 section
+   */
   for (i = start_sector; i <= FLASH_STORAGE_LAST_SECTOR; i++)
   {
     uint32_t wait_time = 0;
@@ -325,12 +345,18 @@ static void _flash_storage_write_default_config(void)
     chThdSleep(TIME_MS2I(wait_time));
   }
 
+  /*
+   * Write default config
+   */
   efl_lld_program(&FLASH_STORAGE_DRIVER_HANDLE, flash_offset, sizeof(flash_storage_default_layer_t),
                   (const uint8_t *)&_flash_storage_default_layer);
 }
 
 static uint32_t _flash_storage_get_crc(void)
 {
+  /*
+   * Use hardware CRC module to calculate flash CRC
+   */
   crcResetI(&FLASH_STORAGE_CRC_HANDLE);
   return crcCalcI(&FLASH_STORAGE_CRC_HANDLE, FLASH_STORAGE_SIZE - sizeof(crc_t),
                   &_flash_storage_area[sizeof(crc_t)]);
@@ -338,6 +364,10 @@ static uint32_t _flash_storage_get_crc(void)
 
 static uint16_t _flash_storage_get_first_sector(void)
 {
+  /*
+   * Calculate absolute index of first flash sector
+   * used for configuration storing
+   */
   const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
   return FLASH_STORAGE_LAST_SECTOR - FLASH_STORAGE_SIZE / desc->sectors_size;
 }
@@ -433,28 +463,45 @@ void flash_storage_init(void)
 
 void *flash_storage_get_pointer_from_offset(uint32_t offset)
 {
+  /*
+   * Use array offset to calculate absolute address
+   */
   return (void *)&_flash_storage_area[offset];
 }
 
 void *flash_storage_get_pointer_from_idx(uint32_t idx)
 {
+  /*
+   * Return absoulte address for idx != 0
+   */
   return (idx) ? flash_storage_get_pointer_from_offset(idx) : NULL;
 }
 
 anykey_layer_t *flash_storage_get_initial_layer(void)
 {
+  /*
+   * Return absoulte pointer to initial layer
+   */
   return flash_storage_get_pointer_from_idx(
       ((flash_storage_header_t *)_flash_storage_area)->initial_layer_idx);
 }
 
 anykey_layer_t *flash_storage_get_first_layer(void)
 {
+  /*
+   * Return absoulte pointer to first layer in linked list
+   */
   return flash_storage_get_pointer_from_idx(
       ((flash_storage_header_t *)_flash_storage_area)->first_layer_idx);
 }
 
 anykey_layer_t *flash_storage_get_layer_by_name(char *name)
 {
+  /*
+   * Search iteratively for layer name in linked list
+   * and return absolute pointer to layer if found.
+   * Otherwise return NULL.
+   */
   anykey_layer_t *layer = flash_storage_get_first_layer();
   while (layer)
   {
@@ -470,6 +517,9 @@ anykey_layer_t *flash_storage_get_layer_by_name(char *name)
 
 void flash_storage_get_display_contrast(uint8_t *contrast_buffer)
 {
+  /*
+   * Return contrast values
+   */
   if (contrast_buffer)
   {
     flash_storage_header_t *header = (flash_storage_header_t *)_flash_storage_area;
@@ -479,9 +529,12 @@ void flash_storage_get_display_contrast(uint8_t *contrast_buffer)
 
 void flash_storage_write_sector(uint8_t *buffer, uint16_t sector)
 {
+  uint32_t wait_time = 0;
   uint16_t start_sector = _flash_storage_get_first_sector();
 
-  uint32_t wait_time = 0;
+  /*
+   * Erase selected sector and write afterwards
+   */
   efl_lld_start_erase_sector(&FLASH_STORAGE_DRIVER_HANDLE, (flash_sector_t)(start_sector + sector));
   efl_lld_query_erase(&FLASH_STORAGE_DRIVER_HANDLE, &wait_time);
   chThdSleep(TIME_MS2I(wait_time));
