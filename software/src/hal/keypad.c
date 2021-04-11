@@ -62,7 +62,8 @@ static keypad_sw_t _keypad_sw_list[KEYPAD_SW_COUNT] = {
     {.line = KEYPAD_BTN_LINE_SW06, .delay = 0, .state = KEYPAD_SW_STATE_INIT},
     {.line = KEYPAD_BTN_LINE_SW07, .delay = 0, .state = KEYPAD_SW_STATE_INIT},
     {.line = KEYPAD_BTN_LINE_SW08, .delay = 0, .state = KEYPAD_SW_STATE_INIT},
-    {.line = KEYPAD_BTN_LINE_SW09, .delay = 0, .state = KEYPAD_SW_STATE_INIT}};
+    {.line = KEYPAD_BTN_LINE_SW09, .delay = 0, .state = KEYPAD_SW_STATE_INIT},
+};
 
 /*
  * Global variables
@@ -82,14 +83,26 @@ static __attribute__((noreturn)) THD_FUNCTION(_keypad_poll_thread, arg)
 
   chRegSetThreadName("keypad_poll_th");
 
+  /*
+   * Poll switches for each KEYPAD_POLL_MAIN_THREAD_P_MS
+   */
   while (true)
   {
     time = chVTGetSystemTimeX();
 
+    /*
+     * Loop over all switches
+     */
     for (sw_id = 0; sw_id < KEYPAD_SW_COUNT; sw_id++)
     {
+      /*
+       * Check if delay is set for switch
+       */
       if (_keypad_sw_list[sw_id].delay == 0)
       {
+        /*
+         * Read current switch state
+         */
 #if defined(USE_STLINK)
         if (_keypad_sw_list[sw_id].line == PAL_LINE(GPIOA, 14U))
         {
@@ -100,10 +113,17 @@ static __attribute__((noreturn)) THD_FUNCTION(_keypad_poll_thread, arg)
         {
           pin_state = palReadLine(_keypad_sw_list[sw_id].line);
         }
-
+        /*
+         * Switch state handling
+         */
         switch (_keypad_sw_list[sw_id].state)
         {
           case KEYPAD_SW_STATE_INIT:
+            /*
+             * Switch is in init state, switch to pressed state
+             * if switch was set and use delay value for switch
+             * debouncing.
+             */
             if (pin_state == KEYPAD_BTN_PRESSED)
             {
               _keypad_sw_list[sw_id].delay = KEYPAD_BTN_DEBOUNCE_TIME_TICKS;
@@ -117,6 +137,11 @@ static __attribute__((noreturn)) THD_FUNCTION(_keypad_poll_thread, arg)
             }
             break;
           case KEYPAD_SW_STATE_PRESS:
+            /*
+             * Switch is in pressed state, switch to un-pressed state
+             * if switch was released and use delay value for switch
+             * debouncing.
+             */
             if (pin_state == KEYPAD_BTN_UNPRESSED)
             {
               _keypad_sw_list[sw_id].delay = KEYPAD_BTN_DEBOUNCE_TIME_TICKS;
@@ -138,12 +163,18 @@ static __attribute__((noreturn)) THD_FUNCTION(_keypad_poll_thread, arg)
       }
       else
       {
+        /*
+         * Decrease delay value
+         */
         _keypad_sw_list[sw_id].delay--;
         _keypad_set_sw_event(sw_id, KEYPAD_EVENT_NONE);
       }
     }
     if (events_dirty)
     {
+      /*
+       * Forward switch events to application layer
+       */
       chEvtBroadcastI(&keypad_event_handle);
     }
     chThdSleepUntilWindowed(time, time + TIME_MS2I(KEYPAD_POLL_MAIN_THREAD_P_MS));
@@ -155,6 +186,10 @@ static __attribute__((noreturn)) THD_FUNCTION(_keypad_poll_thread, arg)
  */
 static void _keypad_set_sw_event(uint8_t sw_id, keypad_event_t event)
 {
+  /*
+   * Use critical section to provide
+   * consistent data
+   */
   chSysLock();
   _keypad_events[sw_id] = event;
   chSysUnlock();
@@ -163,6 +198,10 @@ static void _keypad_set_sw_event(uint8_t sw_id, keypad_event_t event)
 static void _keypad_init_hal(void)
 {
   uint8_t sw_id = 0;
+  /*
+   * Setup switch lines, skip SWD line
+   * in case USW_STLINK is set
+   */
   for (sw_id = 0; sw_id < KEYPAD_SW_COUNT; sw_id++)
   {
 #if defined(USE_STLINK)
@@ -177,13 +216,19 @@ static void _keypad_init_hal(void)
 static void _keypad_init_module(void)
 {
   uint8_t sw_id = 0;
+  /*
+   * Initialize switch events
+   */
   for (sw_id = 0; sw_id < KEYPAD_SW_COUNT; sw_id++)
   {
     _keypad_set_sw_event(sw_id, KEYPAD_EVENT_NONE);
   }
 
+  /*
+   * Initialize event object and
+   * create keypad polling task
+   */
   chEvtObjectInit(&keypad_event_handle);
-
   chThdCreateStatic(_keypad_poll_stack, sizeof(_keypad_poll_stack), KEYPAD_POLL_THREAD_PRIO,
                     _keypad_poll_thread, NULL);
 }
@@ -245,9 +290,11 @@ void keypad_init(void)
 
 void keypad_get_sw_events(keypad_event_t *dest)
 {
+  /*
+   * Use critical section to provide
+   * consistent data
+   */
   chSysLock();
   memcpy(dest, _keypad_events, sizeof(keypad_event_t) * KEYPAD_SW_COUNT);
   chSysUnlock();
-
-  return;
 }
