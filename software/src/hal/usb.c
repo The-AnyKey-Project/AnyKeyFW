@@ -92,18 +92,18 @@ static input_buffers_queue_t _usb_hid_raw_output_queue;
  * USB Device Descriptor.
  */
 static const uint8_t usb_device_descriptor_data[] = {
-    USB_DESC_DEVICE(0x0200,          // bcdUSB (1.1)
-                    0xef,            // bDeviceClass (misc)
-                    0x02,            // bDeviceSubClass (common)
-                    0x01,            // bDeviceProtocol (IAD)
-                    64,              // bMaxPacketSize (64 bytes) (the driver didn't work with 32)
-                    USB_VENDOR_ID,   // idVendor
-                    USB_PRODUCT_ID,  // idProduct
-                    USB_DEVICE_VER,  // bcdDevice
-                    1,               // iManufacturer
-                    2,               // iProduct
-                    3,               // iSerialNumber
-                    1)               // bNumConfigurations
+    USB_DESC_DEVICE(0x0200,         /* bcdUSB (1.1) */
+                    0xef,           /* bDeviceClass (misc) */
+                    0x02,           /* bDeviceSubClass (common) */
+                    0x01,           /* bDeviceProtocol (IAD) */
+                    64,             /* bMaxPacketSize (64 bytes) (the driver didn't work with 32) */
+                    USB_VENDOR_ID,  /* idVendor */
+                    USB_PRODUCT_ID, /* idProduct */
+                    USB_DEVICE_VER, /* bcdDevice */
+                    1,              /* iManufacturer */
+                    2,              /* iProduct */
+                    3,              /* iSerialNumber */
+                    1)              /* bNumConfigurations */
 };
 
 /*
@@ -122,100 +122,106 @@ static const USBDescriptor _usb_device_descriptor = {sizeof usb_device_descripto
 
 /* Keyboard Protocol 1, HID 1.11 spec, Appendix B, page 59-60 */
 static const uint8_t _usb_hid_kbd_report_desc_data[] = {
-    0x05, 0x01,                     // Usage Page (Generic Desktop),
-    0x09, 0x06,                     // Usage (Keyboard),
-    0xA1, 0x01,                     // Collection (Application),
-    0x75, 0x01,                     //   Report Size (1),
-    0x95, 0x08,                     //   Report Count (8),
-    0x05, 0x07,                     //   Usage Page (Key Codes),
-    0x19, 0xE0,                     //   Usage Minimum (224),
-    0x29, 0xE7,                     //   Usage Maximum (231),
-    0x15, 0x00,                     //   Logical Minimum (0),
-    0x25, 0x01,                     //   Logical Maximum (1),
-    0x81, 0x02,                     //   Input (Data, Variable, Absolute), ;Modifier byte
-    0x95, 0x01,                     //   Report Count (1),
-    0x75, 0x08,                     //   Report Size (8),
-    0x81, 0x03,                     //   Input (Constant),                 ;Reserved byte
-    0x95, 0x05,                     //   Report Count (5),
-    0x75, 0x01,                     //   Report Size (1),
-    0x05, 0x08,                     //   Usage Page (LEDs),
-    0x19, 0x01,                     //   Usage Minimum (1),
-    0x29, 0x05,                     //   Usage Maximum (5),
-    0x91, 0x02,                     //   Output (Data, Variable, Absolute), ;LED report
-    0x95, 0x01,                     //   Report Count (1),
-    0x75, 0x03,                     //   Report Size (3),
-    0x91, 0x03,                     //   Output (Constant),                 ;LED report padding
-    0x95, USB_HID_KBD_REPORT_KEYS,  //   Report Count (),
-    0x75, 0x08,                     //   Report Size (8),
-    0x15, 0x00,                     //   Logical Minimum (0),
-    0x25, 0xFF,                     //   Logical Maximum(255),
-    0x05, 0x07,                     //   Usage Page (Key Codes),
-    0x19, 0x00,                     //   Usage Minimum (0),
-    0x29, 0xFF,                     //   Usage Maximum (255),
-    0x81, 0x00,                     //   Input (Data, Array),
-    0xc0                            // End Collection
+    0x05, 0x01,                    /* Usage Page (Generic Desktop)        */
+    0x09, 0x06,                    /* Usage (Keyboard)                    */
+    0xA1, 0x01,                    /* Collection (Application)            */
+    0x75, 0x01,                    /*   Report Size (1)                   */
+    0x95, 0x08,                    /*   Report Count (8)                  */
+    0x05, 0x07,                    /*   Usage Page (Key Codes)            */
+    0x19, 0xE0,                    /*   Usage Minimum (224)               */
+    0x29, 0xE7,                    /*   Usage Maximum (231)               */
+    0x15, 0x00,                    /*   Logical Minimum (0)               */
+    0x25, 0x01,                    /*   Logical Maximum (1)               */
+    0x81, 0x02,                    /*   Input (Data, Variable, Absolute)  */
+    0x95, 0x01,                    /*   Report Count (1)                  */
+    0x75, 0x08,                    /*   Report Size (8)                   */
+    0x81, 0x03,                    /*   Input (Constant)                  */
+    0x95, 0x05,                    /*   Report Count (5)                  */
+    0x75, 0x01,                    /*   Report Size (1)                   */
+    0x05, 0x08,                    /*   Usage Page (LEDs)                 */
+    0x19, 0x01,                    /*   Usage Minimum (1)                 */
+    0x29, 0x05,                    /*   Usage Maximum (5)                 */
+    0x91, 0x02,                    /*   Output (Data, Variable, Absolute) */
+    0x95, 0x01,                    /*   Report Count (1)                  */
+    0x75, 0x03,                    /*   Report Size (3)                   */
+    0x91, 0x03,                    /*   Output (Constant)                 */
+    0x95, USB_HID_KBD_REPORT_KEYS, /*   Report Count ()                   */
+    0x75, 0x08,                    /*   Report Size (8)                   */
+    0x15, 0x00,                    /*   Logical Minimum (0)               */
+    0x25, 0xFF,                    /*   Logical Maximum(255)              */
+    0x05, 0x07,                    /*   Usage Page (Key Codes)            */
+    0x19, 0x00,                    /*   Usage Minimum (0)                 */
+    0x29, 0xFF,                    /*   Usage Maximum (255)               */
+    0x81, 0x00,                    /*   Input (Data, Array)               */
+    0xc0                           /* End Collection                      */
 };
 
 /* audio controls & system controls
  * http://www.microsoft.com/whdc/archive/w2kbd.mspx */
 static const uint8_t _usb_hid_kbdext_report_desc_data[] = {
     /* system control */
-    0x05, 0x01,                      // USAGE_PAGE (Generic Desktop)
-    0x09, 0x80,                      // USAGE (System Control)
-    0xa1, 0x01,                      // COLLECTION (Application)
-    0x85, USB_HID_REPORT_ID_SYSTEM,  //   REPORT_ID (2)
-    0x15, 0x01,                      //   LOGICAL_MINIMUM (0x1)
-    0x25, 0xb7,                      //   LOGICAL_MAXIMUM (0xb7)
-    0x19, 0x01,                      //   USAGE_MINIMUM (0x1)
-    0x29, 0xb7,                      //   USAGE_MAXIMUM (0xb7)
-    0x75, 0x10,                      //   REPORT_SIZE (16)
-    0x95, 0x01,                      //   REPORT_COUNT (1)
-    0x81, 0x00,                      //   INPUT (Data,Array,Abs)
-    0xc0,                            // END_COLLECTION
+    0x05, 0x01,                     /* USAGE_PAGE (Generic Desktop) */
+    0x09, 0x80,                     /* USAGE (System Control)       */
+    0xa1, 0x01,                     /* COLLECTION (Application)     */
+    0x85, USB_HID_REPORT_ID_SYSTEM, /*   REPORT_ID (2)              */
+    0x15, 0x01,                     /*   LOGICAL_MINIMUM (0x1)      */
+    0x25, 0xb7,                     /*   LOGICAL_MAXIMUM (0xb7)     */
+    0x19, 0x01,                     /*   USAGE_MINIMUM (0x1)        */
+    0x29, 0xb7,                     /*   USAGE_MAXIMUM (0xb7)       */
+    0x75, 0x10,                     /*   REPORT_SIZE (16)           */
+    0x95, 0x01,                     /*   REPORT_COUNT (1)           */
+    0x81, 0x00,                     /*   INPUT (Data,Array,Abs)     */
+    0xc0,                           /* END_COLLECTION               */
     /* consumer */
-    0x05, 0x0c,                        // USAGE_PAGE (Consumer Devices)
-    0x09, 0x01,                        // USAGE (Consumer Control)
-    0xa1, 0x01,                        // COLLECTION (Application)
-    0x85, USB_HID_REPORT_ID_CONSUMER,  //   REPORT_ID (3)
-    0x15, 0x01,                        //   LOGICAL_MINIMUM (0x1)
-    0x26, 0x9c, 0x02,                  //   LOGICAL_MAXIMUM (0x29c)
-    0x19, 0x01,                        //   USAGE_MINIMUM (0x1)
-    0x2a, 0x9c, 0x02,                  //   USAGE_MAXIMUM (0x29c)
-    0x75, 0x10,                        //   REPORT_SIZE (16)
-    0x95, 0x01,                        //   REPORT_COUNT (1)
-    0x81, 0x00,                        //   INPUT (Data,Array,Abs)
-    0xc0,                              // END_COLLECTION
+    0x05, 0x0c,                       /* USAGE_PAGE (Consumer Devices) */
+    0x09, 0x01,                       /* USAGE (Consumer Control)      */
+    0xa1, 0x01,                       /* COLLECTION (Application)      */
+    0x85, USB_HID_REPORT_ID_CONSUMER, /*   REPORT_ID (3)               */
+    0x15, 0x01,                       /*   LOGICAL_MINIMUM (0x1)       */
+    0x26, 0x9c, 0x02,                 /*   LOGICAL_MAXIMUM (0x29c)     */
+    0x19, 0x01,                       /*   USAGE_MINIMUM (0x1)         */
+    0x2a, 0x9c, 0x02,                 /*   USAGE_MAXIMUM (0x29c)       */
+    0x75, 0x10,                       /*   REPORT_SIZE (16)            */
+    0x95, 0x01,                       /*   REPORT_COUNT (1)            */
+    0x81, 0x00,                       /*   INPUT (Data,Array,Abs)      */
+    0xc0,                             /* END_COLLECTION                */
 };
 
 static const uint8_t _usb_hid_raw_report_desc_data[] = {
     0x06, 0x60,
-    0xFF,                       // Usage Page 0xFF60 (vendor defined)
-    0x09, 0x61,                 // Usage 0x61
-    0xA1, 0x01,                 // Collection 0x01
-    0x09, 0x62,                 //   Usage 0x62
-    0x15, 0x00,                 //   logical minimum = 0
-    0x25, 0xFF,                 //   logical maximum = 255
-    0x95, USB_HID_RAW_EPSIZE,   //   report count
-    0x75, 0x08,                 //   REPORT_SIZE (8)
-    0x81, USB_HID_RAW_IOF_IN,   //   I/O Feature descriptor
-    0x09, 0x63,                 //   Usage 0x63
-    0x15, 0x00,                 //   logical minimum = 0
-    0x25, 0xFF,                 //   logical maximum = 255
-    0x95, USB_HID_RAW_EPSIZE,   //   report count
-    0x75, 0x08,                 //   REPORT_SIZE (8)
-    0x91, USB_HID_RAW_IOF_OUT,  //   I/O Feature descriptor
-    0xC0                        // end collection
+    0xFF,                      /* Usage Page 0xFF60 (vendor defined) */
+    0x09, 0x61,                /* Usage 0x61                         */
+    0xA1, 0x01,                /* Collection 0x01                    */
+    0x09, 0x62,                /*   Usage 0x62                       */
+    0x15, 0x00,                /*   logical minimum = 0              */
+    0x25, 0xFF,                /*   logical maximum = 255            */
+    0x95, USB_HID_RAW_EPSIZE,  /*   report count                     */
+    0x75, 0x08,                /*   REPORT_SIZE (8)                  */
+    0x81, USB_HID_RAW_IOF_IN,  /*   I/O Feature descriptor           */
+    0x09, 0x63,                /*   Usage 0x63                       */
+    0x15, 0x00,                /*   logical minimum = 0              */
+    0x25, 0xFF,                /*   logical maximum = 255            */
+    0x95, USB_HID_RAW_EPSIZE,  /*   report count                     */
+    0x75, 0x08,                /*   REPORT_SIZE (8)                  */
+    0x91, USB_HID_RAW_IOF_OUT, /*   I/O Feature descriptor           */
+    0xC0                       /* end collection                     */
 };
 
 /*
  * wrapper
  */
-static const USBDescriptor _usb_hid_kbd_report_descriptor = {sizeof _usb_hid_kbd_report_desc_data,
-                                                             _usb_hid_kbd_report_desc_data};
+static const USBDescriptor _usb_hid_kbd_report_descriptor = {
+    sizeof _usb_hid_kbd_report_desc_data,
+    _usb_hid_kbd_report_desc_data,
+};
 static const USBDescriptor _usb_hid_kbdext_report_descriptor = {
-    sizeof _usb_hid_kbdext_report_desc_data, _usb_hid_kbdext_report_desc_data};
-static const USBDescriptor _usb_hid_raw_report_descriptor = {sizeof _usb_hid_raw_report_desc_data,
-                                                             _usb_hid_raw_report_desc_data};
+    sizeof _usb_hid_kbdext_report_desc_data,
+    _usb_hid_kbdext_report_desc_data,
+};
+static const USBDescriptor _usb_hid_raw_report_descriptor = {
+    sizeof _usb_hid_raw_report_desc_data,
+    _usb_hid_raw_report_desc_data,
+};
 
 /*
  * Configuration Descriptor tree for a HID device
@@ -229,12 +235,12 @@ static const USBDescriptor _usb_hid_raw_report_descriptor = {sizeof _usb_hid_raw
 
 static const uint8_t _usb_configuration_descriptor_data[] = {
     /* Configuration Descriptor (9 bytes) USB spec 9.6.3, page 264-266, Table 9-10 */
-    USB_DESC_CONFIGURATION(USB_CONFIG_DESC_DATA_SIZE,  // wTotalLength
-                           USB_NUM_INTERFACES,         // bNumInterfaces
-                           1,                          // bConfigurationValue
-                           0,                          // iConfiguration
-                           0xA0,                       // bmAttributes (RESERVED|REMOTEWAKEUP)
-                           250),                       // bMaxPower (500mA)
+    USB_DESC_CONFIGURATION(USB_CONFIG_DESC_DATA_SIZE, /* wTotalLength                         */
+                           USB_NUM_INTERFACES,        /* bNumInterfaces                       */
+                           1,                         /* bConfigurationValue                  */
+                           0,                         /* iConfiguration                       */
+                           0xA0,                      /* bmAttributes (RESERVED|REMOTEWAKEUP) */
+                           250),                      /* bMaxPower (500mA)                    */
 
     USB_DESC_INTERFACE_ASSOCIATION(USB_HID_KBD_INTERFACE,   /* bFirstInterface.         */
                                    3,                       /* bInterfaceCount.         */
@@ -245,198 +251,194 @@ static const uint8_t _usb_configuration_descriptor_data[] = {
                                    ),
 
     /* Interface Descriptor (9 bytes) USB spec 9.6.5, page 267-269, Table 9-12 */
-    USB_DESC_INTERFACE(USB_HID_KBD_INTERFACE,    // bInterfaceNumber
-                       0,                        // bAlternateSetting
-                       1,                        // bNumEndpoints
-                       USB_CONFIG_HID_CLASS,     // bInterfaceClass: HID
-                       USB_CONFIG_HID_SUBCLASS,  // bInterfaceSubClass: Boot
-                       0x01,                     // bInterfaceProtocol: Keyboard
-                       0),                       // iInterface
+    USB_DESC_INTERFACE(USB_HID_KBD_INTERFACE,   /* bInterfaceNumber             */
+                       0,                       /* bAlternateSetting            */
+                       1,                       /* bNumEndpoints                */
+                       USB_CONFIG_HID_CLASS,    /* bInterfaceClass: HID         */
+                       USB_CONFIG_HID_SUBCLASS, /* bInterfaceSubClass: Boot     */
+                       0x01,                    /* bInterfaceProtocol: Keyboard */
+                       0),                      /* iInterface                   */
 
     /* HID descriptor (9 bytes) HID 1.11 spec, section 6.2.1 */
-    USB_DESC_BYTE(9),                                      // bLength
-    USB_DESC_BYTE(USB_DESCRIPTOR_HID),                     // bDescriptorType (HID class)
-    USB_DESC_BCD(0x0111),                                  // bcdHID: HID version 1.11
-    USB_DESC_BYTE(0),                                      // bCountryCode
-    USB_DESC_BYTE(1),                                      // bNumDescriptors
-    USB_DESC_BYTE(USB_DESCRIPTOR_HID_REPORT),              // bDescriptorType (report desc)
-    USB_DESC_WORD(sizeof(_usb_hid_kbd_report_desc_data)),  // wDescriptorLength
+    USB_DESC_BYTE(9),                                     /* bLength                       */
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID),                    /* bDescriptorType (HID class)   */
+    USB_DESC_BCD(0x0111),                                 /* bcdHID: HID version 1.11      */
+    USB_DESC_BYTE(0),                                     /* bCountryCode                  */
+    USB_DESC_BYTE(1),                                     /* bNumDescriptors               */
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID_REPORT),             /* bDescriptorType (report desc) */
+    USB_DESC_WORD(sizeof(_usb_hid_kbd_report_desc_data)), /* wDescriptorLength             */
 
     /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
-    USB_DESC_ENDPOINT(USB_HID_KBD_EP | 0x80,  // bEndpointAddress
-                      USB_EP_MODE_TYPE_INTR,  // bmAttributes (Interrupt)
-                      USB_HID_KBD_EPSIZE,     // wMaxPacketSize
-                      10),                    // bInterval
+    USB_DESC_ENDPOINT(USB_HID_KBD_EP | 0x80, /* bEndpointAddress         */
+                      USB_EP_MODE_TYPE_INTR, /* bmAttributes (Interrupt) */
+                      USB_HID_KBD_EPSIZE,    /* wMaxPacketSize           */
+                      10),                   /* bInterval                */
 
     /* Interface Descriptor (9 bytes) USB spec 9.6.5, page 267-269, Table 9-12 */
-    USB_DESC_INTERFACE(USB_HID_KBDEXT_INTERFACE,  // bInterfaceNumber
-                       0,                         // bAlternateSetting
-                       1,                         // bNumEndpoints
-                       USB_CONFIG_HID_CLASS,      // bInterfaceClass: HID
-                       0x00,                      // bInterfaceSubClass: None
-                       0x00,                      // bInterfaceProtocol: None
-                       0),                        // iInterface
+    USB_DESC_INTERFACE(USB_HID_KBDEXT_INTERFACE, /* bInterfaceNumber         */
+                       0,                        /* bAlternateSetting        */
+                       1,                        /* bNumEndpoints            */
+                       USB_CONFIG_HID_CLASS,     /* bInterfaceClass: HID     */
+                       0x00,                     /* bInterfaceSubClass: None */
+                       0x00,                     /* bInterfaceProtocol: None */
+                       0),                       /* iInterface               */
 
     /* HID descriptor (9 bytes) HID 1.11 spec, section 6.2.1 */
-    USB_DESC_BYTE(9),                                         // bLength
-    USB_DESC_BYTE(USB_DESCRIPTOR_HID),                        // bDescriptorType (HID class)
-    USB_DESC_BCD(0x0111),                                     // bcdHID: HID version 1.11
-    USB_DESC_BYTE(0),                                         // bCountryCode
-    USB_DESC_BYTE(1),                                         // bNumDescriptors
-    USB_DESC_BYTE(USB_DESCRIPTOR_HID_REPORT),                 // bDescriptorType (report desc)
-    USB_DESC_WORD(sizeof(_usb_hid_kbdext_report_desc_data)),  // wDescriptorLength
+    USB_DESC_BYTE(9),                                        /* bLength                       */
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID),                       /* bDescriptorType (HID class)   */
+    USB_DESC_BCD(0x0111),                                    /* bcdHID: HID version 1.11      */
+    USB_DESC_BYTE(0),                                        /* bCountryCode                  */
+    USB_DESC_BYTE(1),                                        /* bNumDescriptors               */
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID_REPORT),                /* bDescriptorType (report desc) */
+    USB_DESC_WORD(sizeof(_usb_hid_kbdext_report_desc_data)), /* wDescriptorLength             */
 
     /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
-    USB_DESC_ENDPOINT(USB_HID_KBDEXT_EP | 0x80,  // bEndpointAddress
-                      USB_EP_MODE_TYPE_INTR,     // bmAttributes (Interrupt)
-                      USB_HID_KBDEXT_EPSIZE,     // wMaxPacketSize
-                      1),                        // bInterval
+    USB_DESC_ENDPOINT(USB_HID_KBDEXT_EP | 0x80, /* bEndpointAddress         */
+                      USB_EP_MODE_TYPE_INTR,    /* bmAttributes (Interrupt) */
+                      USB_HID_KBDEXT_EPSIZE,    /* wMaxPacketSize           */
+                      1),                       /* bInterval                */
 
     /* Interface Descriptor (9 bytes) USB spec 9.6.5, page 267-269, Table 9-12 */
-    USB_DESC_INTERFACE(USB_HID_RAW_INTERFACE,  // bInterfaceNumber
-                       0,                      // bAlternateSetting
-                       2,                      // bNumEndpoints
-                       USB_CONFIG_HID_CLASS,   // bInterfaceClass: HID
-                       0x00,                   // bInterfaceSubClass: None
-                       0x00,                   // bInterfaceProtocol: None
-                       0),                     // iInterface
+    USB_DESC_INTERFACE(USB_HID_RAW_INTERFACE, /* bInterfaceNumber         */
+                       0,                     /* bAlternateSetting        */
+                       2,                     /* bNumEndpoints            */
+                       USB_CONFIG_HID_CLASS,  /* bInterfaceClass: HID     */
+                       0x00,                  /* bInterfaceSubClass: None */
+                       0x00,                  /* bInterfaceProtocol: None */
+                       0),                    /* iInterface               */
 
     /* HID descriptor (9 bytes) HID 1.11 spec, section 6.2.1 */
-    USB_DESC_BYTE(9),                                      // bLength
-    USB_DESC_BYTE(USB_DESCRIPTOR_HID),                     // bDescriptorType (HID class)
-    USB_DESC_BCD(0x0111),                                  // bcdHID: HID version 1.11
-    USB_DESC_BYTE(0),                                      // bCountryCode
-    USB_DESC_BYTE(1),                                      // bNumDescriptors
-    USB_DESC_BYTE(USB_DESCRIPTOR_HID_REPORT),              // bDescriptorType (report desc)
-    USB_DESC_WORD(sizeof(_usb_hid_raw_report_desc_data)),  // wDescriptorLength
+    USB_DESC_BYTE(9),                                     /* bLength                       */
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID),                    /* bDescriptorType (HID class)   */
+    USB_DESC_BCD(0x0111),                                 /* bcdHID: HID version 1.11      */
+    USB_DESC_BYTE(0),                                     /* bCountryCode                  */
+    USB_DESC_BYTE(1),                                     /* bNumDescriptors               */
+    USB_DESC_BYTE(USB_DESCRIPTOR_HID_REPORT),             /* bDescriptorType (report desc) */
+    USB_DESC_WORD(sizeof(_usb_hid_raw_report_desc_data)), /* wDescriptorLength             */
 
     /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
-    USB_DESC_ENDPOINT(USB_HID_RAW_EP,         // bEndpointAddress
-                      USB_EP_MODE_TYPE_INTR,  // bmAttributes (Interrupt)
-                      USB_HID_RAW_EPSIZE,     // wMaxPacketSize
-                      10),                    // bInterval
+    USB_DESC_ENDPOINT(USB_HID_RAW_EP,        /* bEndpointAddress         */
+                      USB_EP_MODE_TYPE_INTR, /* bmAttributes (Interrupt) */
+                      USB_HID_RAW_EPSIZE,    /* wMaxPacketSize           */
+                      10),                   /* bInterval                */
     /* Endpoint Descriptor (7 bytes) USB spec 9.6.6, page 269-271, Table 9-13 */
-    USB_DESC_ENDPOINT(USB_HID_RAW_EP | 0x80,  // bEndpointAddress
-                      USB_EP_MODE_TYPE_INTR,  // bmAttributes (Interrupt)
-                      USB_HID_RAW_EPSIZE,     // wMaxPacketSize
-                      10),                    // bInterval
+    USB_DESC_ENDPOINT(USB_HID_RAW_EP | 0x80, /* bEndpointAddress         */
+                      USB_EP_MODE_TYPE_INTR, /* bmAttributes (Interrupt) */
+                      USB_HID_RAW_EPSIZE,    /* wMaxPacketSize           */
+                      10),                   /* bInterval                */
 
 #if defined(USE_CMD_SHELL)
-    USB_DESC_INTERFACE_ASSOCIATION(USB_CDC_INT_INTERFACE,             /* bFirstInterface.         */
-                                   2,                                 /* bInterfaceCount.         */
-                                   CDC_COMMUNICATION_INTERFACE_CLASS, /* bFunctionClass.          */
-                                   CDC_ABSTRACT_CONTROL_MODEL,        /* bFunctionSubClass.       */
-                                   1,                                 /* bFunctionProcotol.       */
-                                   0                                  /* iInterface.              */
+    USB_DESC_INTERFACE_ASSOCIATION(USB_CDC_INT_INTERFACE,             /* bFirstInterface     */
+                                   2,                                 /* bInterfaceCount     */
+                                   CDC_COMMUNICATION_INTERFACE_CLASS, /* bFunctionClass      */
+                                   CDC_ABSTRACT_CONTROL_MODEL,        /* bFunctionSubClass   */
+                                   1,                                 /* bFunctionProcotol   */
+                                   0                                  /* iInterface          */
                                    ),
 
     /* Interface Descriptor.*/
-    USB_DESC_INTERFACE(USB_CDC_INT_INTERFACE,             /* bInterfaceNumber.                */
-                       0x00,                              /* bAlternateSetting.               */
-                       0x01,                              /* bNumEndpoints.                   */
-                       CDC_COMMUNICATION_INTERFACE_CLASS, /* bInterfaceClass (Communications */
-                                                          /* Interface Class, CDC section */
-                                                          /* 4.2).                            */
-                       CDC_ABSTRACT_CONTROL_MODEL,        /* bInterfaceSubClass (Abstract */
-                                                          /* Control Model, CDC section 4.3).   */
-                       0x01,                              /* bInterfaceProtocol (AT commands,
-                                                             CDC section 4.4).                */
-                       0),                                /* iInterface.                      */
+    USB_DESC_INTERFACE(USB_CDC_INT_INTERFACE,             /* bInterfaceNumber                                 */
+                       0x00,                              /* bAlternateSetting                                */
+                       0x01,                              /* bNumEndpoints                                    */
+                       CDC_COMMUNICATION_INTERFACE_CLASS, /* bInterfaceClass (Communications Interface Class) */
+                       CDC_ABSTRACT_CONTROL_MODEL,        /* bInterfaceSubClass (Abstract Control Model)      */
+                       0x01,                              /* bInterfaceProtocol (AT commands)                 */
+                       0),                                /* iInterface                                       */
 
     /* Header Functional Descriptor (CDC section 5.2.3).*/
-    USB_DESC_BYTE(5),                /* bLength.                         */
-    USB_DESC_BYTE(CDC_CS_INTERFACE), /* bDescriptorType (CS_INTERFACE).  */
-    USB_DESC_BYTE(CDC_HEADER),       /* bDescriptorSubtype (Header
-                                  Functional Descriptor.           */
-
-    USB_DESC_BCD(0x0110), /* bcdCDC.                          */
+    USB_DESC_BYTE(5),                /* bLength                        */
+    USB_DESC_BYTE(CDC_CS_INTERFACE), /* bDescriptorType (CS_INTERFACE) */
+    USB_DESC_BYTE(CDC_HEADER),       /* bDescriptorSubtype (Header)    */
+    USB_DESC_BCD(0x0110),            /* bcdCDC                         */
 
     /* Call Management Functional Descriptor. */
-    USB_DESC_BYTE(5),                      /* bFunctionLength.                 */
-    USB_DESC_BYTE(CDC_CS_INTERFACE),       /* bDescriptorType (CS_INTERFACE).  */
-    USB_DESC_BYTE(CDC_CALL_MANAGEMENT),    /* bDescriptorSubtype (Call Management
-                               Functional Descriptor).          */
-    USB_DESC_BYTE(0x03),                   /* bmCapabilities (D0+D1).          */
-    USB_DESC_BYTE(USB_CDC_DATA_INTERFACE), /* bDataInterface.                  */
+    USB_DESC_BYTE(5),                      /* bFunctionLength                      */
+    USB_DESC_BYTE(CDC_CS_INTERFACE),       /* bDescriptorType (CS_INTERFACE)       */
+    USB_DESC_BYTE(CDC_CALL_MANAGEMENT),    /* bDescriptorSubtype (Call Management) */
+    USB_DESC_BYTE(0x03),                   /* bmCapabilities (D0+D1)               */
+    USB_DESC_BYTE(USB_CDC_DATA_INTERFACE), /* bDataInterface                       */
 
     /* ACM Functional Descriptor.*/
-    USB_DESC_BYTE(4),                               /* bFunctionLength.                 */
-    USB_DESC_BYTE(CDC_CS_INTERFACE),                /* bDescriptorType (CS_INTERFACE).  */
-    USB_DESC_BYTE(CDC_ABSTRACT_CONTROL_MANAGEMENT), /* bDescriptorSubtype (Abstract
-                            Control Management Descriptor).  */
-    USB_DESC_BYTE(0x02),                            /* bmCapabilities.                  */
+    USB_DESC_BYTE(4),                               /* bFunctionLength                */
+    USB_DESC_BYTE(CDC_CS_INTERFACE),                /* bDescriptorType (CS_INTERFACE) */
+    USB_DESC_BYTE(CDC_ABSTRACT_CONTROL_MANAGEMENT), /* bDescriptorSubtype (Abstract ) */
+    USB_DESC_BYTE(0x02),                            /* bmCapabilities.                */
 
     /* Union Functional Descriptor.*/
-    USB_DESC_BYTE(5),                      /* bFunctionLength.                 */
-    USB_DESC_BYTE(CDC_CS_INTERFACE),       /* bDescriptorType (CS_INTERFACE).  */
-    USB_DESC_BYTE(CDC_UNION),              /* bDescriptorSubtype (Union
-                                         Functional Descriptor).          */
-    USB_DESC_BYTE(USB_CDC_INT_INTERFACE),  /* bMasterInterface (Communication
-                             Class Interface).                */
-    USB_DESC_BYTE(USB_CDC_DATA_INTERFACE), /* bSlaveInterface0 (Data Class
-                            Interface).                      */
+    USB_DESC_BYTE(5),                      /* bFunctionLength                                   */
+    USB_DESC_BYTE(CDC_CS_INTERFACE),       /* bDescriptorType (CS_INTERFACE)                    */
+    USB_DESC_BYTE(CDC_UNION),              /* bDescriptorSubtype (Union  Functional Descriptor) */
+    USB_DESC_BYTE(USB_CDC_INT_INTERFACE),  /* bMasterInterface (Communication Class Interface)  */
+    USB_DESC_BYTE(USB_CDC_DATA_INTERFACE), /* bSlaveInterface0 (Data Class Interface)           */
 
     /* Endpoint 2 Descriptor. in only.*/
-    USB_DESC_ENDPOINT(USB_CDC_INT_REQUEST_EP | 0x80, /* bEndpointAddress */
-                      USB_EP_MODE_TYPE_INTR,         /* bmAttributes (Interrupt). */
-                      USB_CDC_INT_EPSIZE,            /* wMaxPacketSize.                  */
-                      0xff),                         /* bInterval.                       */
+    USB_DESC_ENDPOINT(USB_CDC_INT_REQUEST_EP | 0x80, /* bEndpointAddress         */
+                      USB_EP_MODE_TYPE_INTR,         /* bmAttributes (Interrupt) */
+                      USB_CDC_INT_EPSIZE,            /* wMaxPacketSize.          */
+                      0xff),                         /* bInterval                */
     /* Interface Descriptor.*/
-    USB_DESC_INTERFACE(USB_CDC_DATA_INTERFACE,   /* bInterfaceNumber.                */
-                       0x00,                     /* bAlternateSetting.               */
-                       0x02,                     /* bNumEndpoints.                   */
-                       CDC_DATA_INTERFACE_CLASS, /* bInterfaceClass (Data Class
-                                Interface, CDC section 4.5).     */
-                       0x00,                     /* bInterfaceSubClass (CDC section
-                                                    4.6).                            */
-                       0x00,                     /* bInterfaceProtocol (CDC section
-                                                    4.7).                            */
-                       0x00),                    /* iInterface.                      */
+    USB_DESC_INTERFACE(USB_CDC_DATA_INTERFACE,   /* bInterfaceNumber                        */
+                       0x00,                     /* bAlternateSetting                       */
+                       0x02,                     /* bNumEndpoints.                          */
+                       CDC_DATA_INTERFACE_CLASS, /* bInterfaceClass (Data Class  Interface) */
+                       0x00,                     /* bInterfaceSubClass (CDC section 4.6)    */
+                       0x00,                     /* bInterfaceProtocol (CDC section 4.7)    */
+                       0x00),                    /* iInterface                              */
     /* Endpoint 1 Descriptor.*/
-    USB_DESC_ENDPOINT(USB_CDC_DATA_AVAILABLE_EP, /* bEndpointAddress.*/
-                      USB_EP_MODE_TYPE_BULK,     /* bmAttributes (Bulk).             */
-                      USB_CDC_DATA_EPSIZE,       /* wMaxPacketSize.                  */
-                      0x00),                     /* bInterval.                       */
+    USB_DESC_ENDPOINT(USB_CDC_DATA_AVAILABLE_EP, /* bEndpointAddress    */
+                      USB_EP_MODE_TYPE_BULK,     /* bmAttributes (Bulk) */
+                      USB_CDC_DATA_EPSIZE,       /* wMaxPacketSize.     */
+                      0x00),                     /* bInterval.          */
     /* Endpoint 1 Descriptor.*/
-    USB_DESC_ENDPOINT(USB_CDC_DATA_REQUEST_EP | 0x80, /* bEndpointAddress.*/
-                      USB_EP_MODE_TYPE_BULK,          /* bmAttributes (Bulk).             */
-                      USB_CDC_DATA_EPSIZE,            /* wMaxPacketSize.                  */
-                      0x00),                          /* bInterval.                       */
+    USB_DESC_ENDPOINT(USB_CDC_DATA_REQUEST_EP | 0x80, /* bEndpointAddress    */
+                      USB_EP_MODE_TYPE_BULK,          /* bmAttributes (Bulk) */
+                      USB_CDC_DATA_EPSIZE,            /* wMaxPacketSize      */
+                      0x00),                          /* bInterval           */
 #endif
 };
 
 /* Configuration Descriptor wrapper */
 static const USBDescriptor _usb_configuration_descriptor = {
-    sizeof _usb_configuration_descriptor_data, _usb_configuration_descriptor_data};
+    sizeof _usb_configuration_descriptor_data,
+    _usb_configuration_descriptor_data,
+};
 
 /* wrappers */
 static const USBDescriptor _usb_hid_kbd_descriptor = {
-    USB_CONFIG_DESC_HID_SIZE, &_usb_configuration_descriptor_data[USB_HID_KBD_DESC_OFFSET]};
+    USB_CONFIG_DESC_HID_SIZE,
+    &_usb_configuration_descriptor_data[USB_HID_KBD_DESC_OFFSET],
+};
 static const USBDescriptor _usb_hid_kbdext_descriptor = {
-    USB_CONFIG_DESC_HID_SIZE, &_usb_configuration_descriptor_data[USB_HID_KBDEXT_DESC_OFFSET]};
+    USB_CONFIG_DESC_HID_SIZE,
+    &_usb_configuration_descriptor_data[USB_HID_KBDEXT_DESC_OFFSET],
+};
 static const USBDescriptor _usb_hid_raw_descriptor = {
-    USB_CONFIG_DESC_HID_SIZE, &_usb_configuration_descriptor_data[USB_HID_RAW_DESC_OFFSET]};
+    USB_CONFIG_DESC_HID_SIZE,
+    &_usb_configuration_descriptor_data[USB_HID_RAW_DESC_OFFSET],
+};
 
 #if defined(USE_CMD_SHELL)
 static const USBDescriptor _usb_cdc_descriptor = {
-    USB_CONFIG_DESC_CDC_SIZE, &_usb_configuration_descriptor_data[USB_CDC_DESC_OFFSET]};
+    USB_CONFIG_DESC_CDC_SIZE,
+    &_usb_configuration_descriptor_data[USB_CDC_DESC_OFFSET],
+};
 #endif
 
 /*
  * U.S. English language identifier.
  */
 static const uint8_t _usb_desc_string0[] = {
-    USB_DESC_BYTE(4),                     /* bLength.                         */
-    USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
-    USB_DESC_WORD(0x0409)                 /* wLANGID (U.S. English).          */
+    USB_DESC_BYTE(4),                     /* bLength                */
+    USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType        */
+    USB_DESC_WORD(0x0409)                 /* wLANGID (U.S. English) */
 };
 
 /*
  * Vendor string.
  */
 static const uint8_t _usb_desc_string1[] = {
-    USB_DESC_BYTE(38),                    /* bLength.                         */
-    USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
+    USB_DESC_BYTE(38),                    /* bLength         */
+    USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType */
     USB_DESC_CHAR_PADDED('T'),
     USB_DESC_CHAR_PADDED('h'),
     USB_DESC_CHAR_PADDED('e'),
@@ -461,8 +463,8 @@ static const uint8_t _usb_desc_string1[] = {
  * Device Description string.
  */
 static const uint8_t _usb_desc_string2[] = {
-    USB_DESC_BYTE(72),                    /* bLength.                         */
-    USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
+    USB_DESC_BYTE(72),                    /* bLength         */
+    USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType */
     USB_DESC_CHAR_PADDED('C'),
     USB_DESC_CHAR_PADDED('o'),
     USB_DESC_CHAR_PADDED('n'),
@@ -504,8 +506,8 @@ static const uint8_t _usb_desc_string2[] = {
  * Serial Number string.
  */
 static const uint8_t _usb_desc_string3[] = {
-    USB_DESC_BYTE(8),                     /* bLength.                         */
-    USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType.                 */
+    USB_DESC_BYTE(8),                     /* bLength.        */
+    USB_DESC_BYTE(USB_DESCRIPTOR_STRING), /* bDescriptorType */
     '0' + CH_KERNEL_MAJOR,
     0,
     '0' + CH_KERNEL_MINOR,
@@ -544,7 +546,7 @@ static const USBEndpointConfig _usb_ep_configs[] = {
 #if defined(USE_CMD_SHELL)
      {USB_EP_MODE_TYPE_INTR, NULL, sduInterruptTransmitted, NULL, 0x0010, 0x0000,
      &_usb_ep_in_states[USB_CDC_INT_REQUEST_EPS_IN], NULL, 2, NULL},
-    {USB_EP_MODE_TYPE_BULK, NULL, sduDataTransmitted, sduDataReceived, 0x0040, 0x0040,
+    {USB_EP_MODE_TYPE_BULK, NULL, sduDataTransmitted, sduDataReceived, SERIAL_USB_BUFFERS_SIZE, SERIAL_USB_BUFFERS_SIZE,
      &_usb_ep_in_states[USB_CDC_DATA_REQUEST_EPS_IN], &_usb_ep_out_states[USB_CDC_DATA_AVAILABLE_EPS_OUT], 2, NULL},
 #endif
 };
@@ -553,7 +555,12 @@ static const USBEndpointConfig _usb_ep_configs[] = {
 /*
  * USB driver configuration.
  */
-const USBConfig usbcfg = {_usb_event_cb, _usb_get_descriptor_cb, _usb_request_hook_cb, _usb_sof_cb};
+const USBConfig usbcfg = {
+    _usb_event_cb,
+    _usb_get_descriptor_cb,
+    _usb_request_hook_cb,
+    _usb_sof_cb,
+};
 
 #if defined(USE_CMD_SHELL)
 /*
@@ -564,8 +571,12 @@ SerialUSBDriver USB_CDC_DRIVER_HANDLE;
 /*
  * Serial over USB driver configuration.
  */
-const SerialUSBConfig serusbcfg = {&USB_DRIVER_HANDLE, USB_CDC_DATA_REQUEST_EP,
-                                   USB_CDC_DATA_AVAILABLE_EP, USB_CDC_INT_REQUEST_EP};
+const SerialUSBConfig serusbcfg = {
+    &USB_DRIVER_HANDLE,
+    USB_CDC_DATA_REQUEST_EP,
+    USB_CDC_DATA_AVAILABLE_EP,
+    USB_CDC_INT_REQUEST_EP,
+};
 #endif
 
 /*
@@ -598,16 +609,30 @@ static void _usb_init_module(void)
   chThdSleepMilliseconds(1500);
 #endif
 
+  /*
+   * Initialize timer objects for
+   * idle and report timer
+   */
   chVTObjectInit(&_usb_hid_kbd_idle_timer);
   chVTObjectInit(&_usb_hid_kbd_report_timer);
+
+  /*
+   * Initialize report pool
+   */
   memset(_usb_hid_kbd_report_pool, 0, sizeof(_usb_hid_kbd_report_pool));
   _usb_hid_kbd_report_prepare = &_usb_hid_kbd_report_pool[_usb_hid_report_idx];
 
+  /*
+   * Initialize I/O queues for HID raw
+   */
   ibqObjectInit(&_usb_hid_raw_input_queue, true, _usb_hid_raw_input_buffer, USB_HID_RAW_EPSIZE,
                 USB_HID_RAW_INPUT_BUFFER_ENTRIES, _usb_hid_raw_ibnotify_cb, NULL);
   obqObjectInit(&_usb_hid_raw_output_queue, true, _usb_hid_raw_output_buffer, USB_HID_RAW_EPSIZE,
                 USB_HID_RAW_OUTPUT_BUFFER_ENTRIES, _usb_hid_raw_obnotify_cb, NULL);
 
+  /*
+   * Start USB driver
+   */
   usbStart(&USB_DRIVER_HANDLE, &usbcfg);
   usbConnectBus(&USB_DRIVER_HANDLE);
 }
@@ -631,10 +656,16 @@ static bool _usb_hid_request_hook(USBDriver *usbp)
     {
       case USB_RTYPE_DIR_DEV2HOST:
         switch (usbp->setup[1])
-        { /* bRequest */
+        {
+          /*
+           * bRequest
+           */
           case USB_HID_GET_REPORT:
             switch (usbp->setup[4])
-            { /* LSB(wIndex) (check MSB==0?) */
+            {
+              /*
+               * LSB(wIndex) (check MSB==0?)
+               */
               case USB_HID_KBD_INTERFACE:
                 usbSetupTransfer(usbp, (uint8_t *)_usb_hid_kbd_report_inflight,
                                  sizeof(usb_hid_kbd_report_t), NULL);
@@ -643,10 +674,16 @@ static bool _usb_hid_request_hook(USBDriver *usbp)
 
               case USB_HID_KBDEXT_INTERFACE:
                 if (usbp->setup[3] == 1)
-                { /* MSB(wValue) [Report Type] == 1 [Input Report] */
+                {
+                  /*
+                   * MSB(wValue) [Report Type] == 1 [Input Report]
+                   */
                   usb_hid_kbdext_report_t blank_report = {.key = 0};
                   switch (usbp->setup[2])
-                  { /* LSB(wValue) [Report ID] */
+                  {
+                    /*
+                     * LSB(wValue) [Report ID]
+                     */
                     case USB_HID_REPORT_ID_SYSTEM:
                       blank_report.report_id = USB_HID_REPORT_ID_SYSTEM;
                       usbSetupTransfer(usbp, (uint8_t *)&blank_report, sizeof(blank_report), NULL);
@@ -684,7 +721,10 @@ static bool _usb_hid_request_hook(USBDriver *usbp)
 
           case USB_HID_GET_PROTOCOL:
             if ((usbp->setup[4] == USB_HID_KBD_INTERFACE) && (usbp->setup[5] == 0))
-            { /* wIndex */
+            {
+              /*
+               * wIndex
+               */
               usbSetupTransfer(usbp, &_usb_hid_kbd_protocol, 1, NULL);
               return TRUE;
             }
@@ -699,14 +739,22 @@ static bool _usb_hid_request_hook(USBDriver *usbp)
 
       case USB_RTYPE_DIR_HOST2DEV:
         switch (usbp->setup[1])
-        { /* bRequest */
+        {
+          /*
+           * bRequest
+           */
           case USB_HID_SET_PROTOCOL:
             if ((usbp->setup[4] == USB_HID_KBD_INTERFACE) && (usbp->setup[5] == 0))
-            {                                                     /* wIndex */
+            {
+              /*
+               * wIndex
+               */
               _usb_hid_kbd_protocol = ((usbp->setup[2]) != 0x00); /* LSB(wValue) */
               if (_usb_hid_kbd_idle)
               {
-                /* arm the idle timer if boot protocol & idle */
+                /*
+                 * Arm the idle timer if boot protocol & idle
+                 */
                 chSysLockFromISR();
                 chVTSetI(&_usb_hid_kbd_idle_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle),
                          _usb_hid_kbd_idle_timer_cb, (void *)usbp);
@@ -719,7 +767,9 @@ static bool _usb_hid_request_hook(USBDriver *usbp)
 
           case USB_HID_SET_IDLE:
             _usb_hid_kbd_idle = usbp->setup[3]; /* MSB(wValue) */
-                                                /* arm the timer */
+            /*
+             * Arm the timer
+             */
             if (_usb_hid_kbd_idle)
             {
               chSysLockFromISR();
@@ -735,7 +785,10 @@ static bool _usb_hid_request_hook(USBDriver *usbp)
     }
   }
 
-  /* Handle the Get_Descriptor Request for HID class (not handled by the default hook) */
+  /*
+   * Handle the Get_Descriptor Request
+   * for HID class (not handled by the default hook)
+   */
   if ((usbp->setup[0] == 0x81) && (usbp->setup[1] == USB_REQ_GET_DESCRIPTOR))
   {
     dp = usbp->config->get_descriptor_cb(usbp, usbp->setup[3], usbp->setup[2],
@@ -750,6 +803,10 @@ static bool _usb_hid_request_hook(USBDriver *usbp)
 
 static void _usb_hid_kbd_report_pool_next(void)
 {
+  /*
+   * Switch to next report inside
+   * critical section
+   */
   chSysLock();
   _usb_hid_kbd_report_inflight = _usb_hid_kbd_report_prepare;
   _usb_hid_report_idx = (_usb_hid_report_idx + 1) % USB_HID_KBD_REPORT_POOLSIZE;
@@ -769,15 +826,19 @@ static bool _usb_hid_kbd_send_report(bool is_in_cb)
   }
   chSysUnlockFromISR();
 
-  /* need to wait until the previous packet has made it through */
-  /* busy wait, should be short and not very common */
+  /*
+   * Need to wait until the previous packet has made it through
+   * busy wait, should be short and not very common
+   */
   chSysLockFromISR();
   if (usbGetTransmitStatusI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP))
   {
-    /* Need to either suspend, or loop and call unlock/lock during
+    /*
+     * Need to either suspend, or loop and call unlock/lock during
      * every iteration - otherwise the system will remain locked,
      * no interrupts served, so USB not going through as well.
-     * Note: for suspend, need USB_USE_WAIT == TRUE in halconf.h */
+     * Note: for suspend, need USB_USE_WAIT == TRUE in halconf.h
+     */
     if (is_in_cb == FALSE)
     {
       chThdSuspendS(&(&USB_DRIVER_HANDLE)->epc[USB_HID_KBD_EP]->in_state->thread);
@@ -798,27 +859,36 @@ static bool _usb_hid_raw_start_receive(void)
 {
   uint8_t *buf;
 
-  /* If the USB driver is not in the appropriate state then transactions
-     must not be started.*/
+  /*
+   * If the USB driver is not in the appropriate
+   * state then transactions must not be started
+   * */
   if ((usbGetDriverStateI(&USB_DRIVER_HANDLE) != USB_ACTIVE))
   {
     return true;
   }
 
-  /* Checking if there is already a transaction ongoing on the endpoint.*/
+  /*
+   * Checking if there is already a transaction
+   * ongoing on the endpoint
+   */
   if (usbGetReceiveStatusI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP))
   {
     return true;
   }
 
-  /* Checking if there is a buffer ready for incoming data.*/
+  /*
+   * Checking if there is a buffer ready for incoming data
+   */
   buf = ibqGetEmptyBufferI(&_usb_hid_raw_input_queue);
   if (buf == NULL)
   {
     return true;
   }
 
-  /* Buffer found, starting a new transaction.*/
+  /*
+   * Buffer found, starting a new transaction
+   */
   usbStartReceiveI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP, buf, USB_HID_RAW_EPSIZE);
 
   return false;
@@ -826,15 +896,19 @@ static bool _usb_hid_raw_start_receive(void)
 
 static void _usb_hid_raw_sof_hook(void)
 {
-  /* If the USB driver is not in the appropriate state then transactions
-     must not be started.*/
+  /*
+   * If the USB driver is not in the appropriate
+   * state then transactions must not be started
+   */
   if ((usbGetDriverStateI(&USB_DRIVER_HANDLE) != USB_ACTIVE))
   {
     return;
   }
 
-  /* If there is already a transaction ongoing then another one cannot be
-     started.*/
+  /*
+   * If there is already a transaction ongoing
+   * then another one cannot be started
+   */
   if (usbGetTransmitStatusI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP))
   {
     return;
@@ -866,9 +940,11 @@ static void _usb_event_cb(USBDriver *usbp, usbevent_t event)
     case USB_EVENT_CONFIGURED:
       chSysLockFromISR();
 
-      /* Enables the endpoints specified into the configuration.
-         Note, this callback is invoked from an ISR so I-Class functions
-         must be used.*/
+      /*
+       * Enables the endpoints specified into the configuration.
+       * Note, this callback is invoked from an ISR so I-Class
+       * functions must be used
+       */
       usbInitEndpointI(usbp, USB_HID_KBD_EP, &_usb_ep_configs[USB_HID_KBD_INTERFACE]);
       usbInitEndpointI(usbp, USB_HID_KBDEXT_EP, &_usb_ep_configs[USB_HID_KBDEXT_INTERFACE]);
       usbInitEndpointI(usbp, USB_HID_RAW_EP, &_usb_ep_configs[USB_HID_RAW_INTERFACE]);
@@ -893,7 +969,9 @@ static void _usb_event_cb(USBDriver *usbp, usbevent_t event)
 #if defined(USE_CMD_SHELL)
       chSysLockFromISR();
 
-      /* Disconnection event on suspend.*/
+      /*
+       * Disconnection event on suspend
+       */
       sduSuspendHookI(&USB_CDC_DRIVER_HANDLE);
 
       chSysUnlockFromISR();
@@ -903,7 +981,9 @@ static void _usb_event_cb(USBDriver *usbp, usbevent_t event)
 #if defined(USE_CMD_SHELL)
       chSysLockFromISR();
 
-      /* Connection event on wakeup.*/
+      /*
+       * Connection event on wakeup
+       */
       sduWakeupHookI(&USB_CDC_DRIVER_HANDLE);
 
       chSysUnlockFromISR();
@@ -1001,39 +1081,56 @@ static void _usb_hid_kbd_idle_timer_cb(void *arg)
 
   chSysLockFromISR();
 
-  /* check that the states of things are as they're supposed to */
+  /*
+   * Check that the states of things
+   * are as they're supposed to
+   */
   if (usbGetDriverStateI(usbp) != USB_ACTIVE)
   {
-    /* do not rearm the timer, should be enabled on IDLE request */
+    /*
+     * Do not rearm the timer, should be enabled on IDLE request
+     */
     chSysUnlockFromISR();
     return;
   }
 
   if (_usb_hid_kbd_idle)
   {
-    /* TODO: are we sure we want the KBD_ENDPOINT? */
     if (!usbGetTransmitStatusI(usbp, USB_HID_KBD_EP))
     {
       usbStartTransmitI(usbp, USB_HID_KBD_EP, (uint8_t *)_usb_hid_kbd_report_inflight,
                         sizeof(usb_hid_kbd_report_t));
     }
-    /* rearm the timer */
+    /*
+     * Rearm the timer
+     */
     chVTSetI(&_usb_hid_kbd_idle_timer, 4 * TIME_MS2I(_usb_hid_kbd_idle), _usb_hid_kbd_idle_timer_cb,
              (void *)usbp);
   }
 
-  /* do not rearm the timer if the condition above fails
-   * it should be enabled again on either IDLE or SET_PROTOCOL requests */
+  /*
+   * Do not rearm the timer if the condition above fails
+   * it should be enabled again on either IDLE or SET_PROTOCOL requests
+   */
   chSysUnlockFromISR();
 }
 
 static void _usb_hid_kbd_report_timer_cb(void *arg)
 {
+  /*
+   * Release current report buffer
+   * if retry == FALSE
+   */
   bool retry = (bool)arg;
   if (retry == FALSE)
   {
     _usb_hid_kbd_report_pool_next();
   }
+  /*
+   * Try to send report, restart timer
+   * if send fails and USB_HID_KBD_REPORT_RETRY_MAX
+   * is not yet reached
+   */
   if (_usb_hid_kbd_send_report(TRUE) == FALSE)
   {
     if (_usb_hid_report_retry_counter < USB_HID_KBD_REPORT_RETRY_MAX)
@@ -1054,24 +1151,33 @@ static void _usb_hid_raw_in_cb(USBDriver *usbp, usbep_t ep)
 
   chSysLockFromISR();
 
-  /* Freeing the buffer just transmitted, if it was not a zero size packet.*/
+  /*
+   * Freeing the buffer just transmitted,
+   * if it was not a zero size packet
+   */
   if (usbp->epc[ep]->in_state->txsize > 0U)
   {
     obqReleaseEmptyBufferI(&_usb_hid_raw_output_queue);
   }
 
-  /* Checking if there is a buffer ready for transmission.*/
+  /*
+   * Checking if there is a buffer ready for transmission
+   */
   buf = obqGetFullBufferI(&_usb_hid_raw_output_queue, &n);
 
   if (buf != NULL)
   {
-    /* The endpoint cannot be busy, we are in the context of the callback,
-       so it is safe to transmit without a check.*/
+    /*
+     * The endpoint cannot be busy, we are in the context
+     * of the callback, so it is safe to transmit without a check
+     */
     usbStartTransmitI(usbp, ep, buf, n);
   }
   else
   {
-    /* Nothing to transmit.*/
+    /*
+     * Nothing to transmit
+     */
   }
 
   chSysUnlockFromISR();
@@ -1083,17 +1189,23 @@ static void _usb_hid_raw_out_cb(USBDriver *usbp, usbep_t ep)
 
   chSysLockFromISR();
 
-  /* Checking for zero-size transactions.*/
+  /*
+   * Checking for zero-size transactions
+   */
   size = usbGetReceiveTransactionSizeX(usbp, ep);
   if (size > (size_t)0)
   {
-    /* Posting the filled buffer in the queue.*/
+    /*
+     * Posting the filled buffer in the queue
+     */
     ibqPostFullBufferI(&_usb_hid_raw_input_queue, size);
   }
 
-  /* The endpoint cannot be busy, we are in the context of the callback,
-     so a packet is in the buffer for sure. Trying to get a free buffer
-     for the next transaction.*/
+  /*
+   * The endpoint cannot be busy, we are in the context of the callback,
+   * so a packet is in the buffer for sure. Trying to get a free buffer
+   * for the next transaction
+   */
   (void)_usb_hid_raw_start_receive();
 
   chSysUnlockFromISR();
@@ -1110,20 +1222,27 @@ static void _usb_hid_raw_obnotify_cb(io_buffers_queue_t *bqp)
   (void)bqp;
   size_t n;
 
-  /* If the USB driver is not in the appropriate state then transactions
-     must not be started.*/
+  /*
+   * If the USB driver is not in the appropriate state
+   * then transactions must not be started
+   */
   if (usbGetDriverStateI(&USB_DRIVER_HANDLE) != USB_ACTIVE)
   {
     return;
   }
 
-  /* Checking if there is already a transaction ongoing on the endpoint.*/
+  /*
+   * Checking if there is already a transaction ongoing
+   * on the endpoint
+   */
   if (!usbGetTransmitStatusI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP))
   {
-    /* Getting a full buffer, a buffer is available for sure because this
-       callback is invoked when one has been inserted.*/
+    /*
+     * Getting a full buffer, a buffer is available for
+     * sure because this callback is invoked when one
+     * has been inserted
+     */
     uint8_t *buf = obqGetFullBufferI(&_usb_hid_raw_output_queue, &n);
-    osalDbgAssert(buf != NULL, "buffer not found");
     usbStartTransmitI(&USB_DRIVER_HANDLE, USB_HID_RAW_EP, buf, n);
   }
 }
@@ -1173,26 +1292,47 @@ void usb_init(void)
 
 void usb_hid_kbd_flush(void)
 {
+  /*
+   * Switch to next report buffer
+   * and send report
+   */
   _usb_hid_kbd_report_pool_next();
   _usb_hid_kbd_send_report(FALSE);
 }
 
 void usb_hid_kbd_send_key(uint8_t mods, uint8_t key)
 {
+  /*
+   * Stop current timer
+   */
   chVTReset(&_usb_hid_kbd_report_timer);
   if (_usb_hid_report_payload_idx && mods != _usb_hid_kbd_report_prepare->mods)
   {
+    /*
+     * We send multiple keys per report, as long
+     * as they use the same mods
+     */
     usb_hid_kbd_flush();
   }
+  /*
+   * Add key to report
+   */
   _usb_hid_kbd_report_prepare->mods = mods;
   _usb_hid_kbd_report_prepare->keys[_usb_hid_report_payload_idx] = key;
   _usb_hid_report_payload_idx++;
   if (_usb_hid_report_payload_idx == USB_HID_KBD_REPORT_KEYS)
   {
+    /*
+     * Report full -> send
+     */
     usb_hid_kbd_flush();
   }
   else
   {
+    /*
+     * Still space left, set oneshot timer
+     * to force sending
+     */
     chVTSet(&_usb_hid_kbd_report_timer, TIME_MS2I(USB_HID_KBD_REPORT_TIMEOUT_MS),
             _usb_hid_kbd_report_timer_cb, (void *)FALSE);
   }
@@ -1203,13 +1343,23 @@ void usb_hid_kbdext_send_key(usb_hid_report_id_t report_id, uint16_t keyext)
   usb_hid_kbdext_report_t report;
   report.report_id = report_id;
   report.key = keyext;
+
   chSysLock();
+
+  /*
+   * If the USB driver is not in the appropriate state
+   * then transactions must not be started
+   */
   if (usbGetDriverStateI(&USB_DRIVER_HANDLE) != USB_ACTIVE)
   {
     chSysUnlock();
     return;
   }
 
+  /*
+   * Suspend thread if already another transmission is
+   * ongoing
+   */
   if (usbGetTransmitStatusI(&USB_DRIVER_HANDLE, USB_HID_KBD_EP))
   {
     chSysUnlock();
