@@ -6,9 +6,18 @@
 include env_vars
 export $(shell sed 's/=.*//' env_vars)
 
+# Set optimization level
+ifeq ($(USE_DEBUG_BUILD),1)
+  USE_DEBUG_BUILD = -DUSE_DEBUG_BUILD
+  OPT_LEVEL = -Og
+else
+  USE_DEBUG_BUILD = 
+  OPT_LEVEL = -Os
+endif
+
 # Compiler options here.
 ifeq ($(USE_OPT),)
-  USE_OPT = -Og -ggdb -fomit-frame-pointer -falign-functions=16 -fdata-sections
+  USE_OPT = $(OPT_LEVEL) -ggdb -fomit-frame-pointer -falign-functions=16 -fdata-sections
 endif
 
 # C specific options here (added to USE_OPT).
@@ -66,6 +75,13 @@ ifeq ($(USE_USB_DISC),1)
   USE_USB_DISC = -DUSE_USB_DISC
 else
   USE_USB_DISC = 
+endif
+
+# Enable USB bootloader support
+ifeq ($(USE_MAPLEMINI_BOOTLOADER),1)
+  USE_MAPLEMINI_BOOTLOADER = -DUSE_MAPLEMINI_BOOTLOADER
+else
+  USE_MAPLEMINI_BOOTLOADER = 
 endif
 
 #
@@ -139,11 +155,17 @@ include $(CHIBIOS)/os/hal/lib/streams/streams.mk
 include $(CHIBIOS)/os/various/shell/shell.mk
 
 # Define linker script file here
-ifeq ($(USE_MAPLEMINI_BOOTLOADER),1)
-  LDSCRIPT = ./ld/STM32F103x8_maplemini_bootloader.ld
-else
-  LDSCRIPT = ./ld/STM32F103x8.ld
-endif
+LDSCRIPT_FOLDER=./ld
+LDSCRIPT_TMPL=STM32F103x8.ld
+LDSCRIPT_GEN=$(LDSCRIPT_TMPL).generated
+LDSCRIPT=$(BUILDDIR)/$(LDSCRIPT_GEN)
+
+$(LDSCRIPT_FOLDER)/$(LDSCRIPT_GEN): $(LDSCRIPT_FOLDER)/$(LDSCRIPT_TMPL)
+	@echo Generating linker script $@ based on template $<
+	$(CC) -E -x c -I $(LDSCRIPT_FOLDER) $(CFLAGS) $< | grep -v '^#' > $@
+	
+$(LDSCRIPT): $(LDSCRIPT_FOLDER)/$(LDSCRIPT_GEN)
+	mv $< $@
 
 # u8g2 sources
 
@@ -227,7 +249,7 @@ CPPWARN = -Wall -Wextra -Wundef
 #
 
 # List all user C define here, like -D_DEBUG=1
-UDEFS = -DSHELL_CMD_TEST_ENABLED=0 ${USE_STLINK} ${USE_CMD_SHELL} ${USE_USB_DISC}
+UDEFS = -DSHELL_CMD_TEST_ENABLED=0 ${USE_STLINK} ${USE_CMD_SHELL} ${USE_USB_DISC} ${USE_DEBUG_BUILD} ${USE_MAPLEMINI_BOOTLOADER}
 
 # Define ASM defines here
 UADEFS =

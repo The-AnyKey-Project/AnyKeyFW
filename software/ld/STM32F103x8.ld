@@ -17,17 +17,19 @@
 /*
  * ST32F103x8 memory setup.
  */
+#include "layout.h"
+ 
 MEMORY
 {
-    flash0 (rx) : org = 0x08000000, len = 48k
-    flash1 (rx) : org = 0x0800C000, len = 16k
+    flash0 (rx) : org = LAYOUT_FLASH1_START, len = LAYOUT_FLASH1_SIZE
+    flash1 (rx) : org = LAYOUT_FLASH2_START, len = LAYOUT_FLASH2_SIZE
     flash2 (rx) : org = 0x00000000, len = 0
     flash3 (rx) : org = 0x00000000, len = 0
     flash4 (rx) : org = 0x00000000, len = 0
     flash5 (rx) : org = 0x00000000, len = 0
     flash6 (rx) : org = 0x00000000, len = 0
     flash7 (rx) : org = 0x00000000, len = 0
-    ram0   (wx) : org = 0x20000000, len = 20k
+    ram0   (wx) : org = LAYOUT_RAM_OFFSET, len = LAYOUT_RAM_AVAILABLE
     ram1   (wx) : org = 0x00000000, len = 0
     ram2   (wx) : org = 0x00000000, len = 0
     ram3   (wx) : org = 0x00000000, len = 0
