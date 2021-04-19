@@ -17,19 +17,19 @@
 /*
  * ST32F103x8 memory setup.
  */
-#include "layout.h"
+#include "cfg/hal/linker_layout_cfg.h"
  
 MEMORY
 {
-    flash0 (rx) : org = LAYOUT_FLASH1_START, len = LAYOUT_FLASH1_SIZE
-    flash1 (rx) : org = LAYOUT_FLASH2_START, len = LAYOUT_FLASH2_SIZE
+    flash0 (rx) : org = LINKER_LAYOUT_FLASH0_START, len = LINKER_LAYOUT_FLASH0_SIZE
+    flash1 (rx) : org = LINKER_LAYOUT_FLASH1_START, len = LINKER_LAYOUT_FLASH1_SIZE
     flash2 (rx) : org = 0x00000000, len = 0
     flash3 (rx) : org = 0x00000000, len = 0
     flash4 (rx) : org = 0x00000000, len = 0
     flash5 (rx) : org = 0x00000000, len = 0
     flash6 (rx) : org = 0x00000000, len = 0
     flash7 (rx) : org = 0x00000000, len = 0
-    ram0   (wx) : org = LAYOUT_RAM_OFFSET, len = LAYOUT_RAM_AVAILABLE
+    ram0   (wx) : org = LINKER_LAYOUT_RAM0_START, len = LINKER_LAYOUT_RAM0_SIZE
     ram1   (wx) : org = 0x00000000, len = 0
     ram2   (wx) : org = 0x00000000, len = 0
     ram3   (wx) : org = 0x00000000, len = 0

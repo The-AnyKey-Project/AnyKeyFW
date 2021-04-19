@@ -51,7 +51,6 @@ static void _flash_storage_init_hal(void);
 static void _flash_storage_init_module(void);
 static void _flash_storage_write_default_config(void);
 static uint32_t _flash_storage_get_crc(void);
-static uint16_t _flash_storage_get_first_sector(void);
 #if defined(USE_CMD_SHELL)
 static uint8_t _flash_storage_verify_config(uint8_t *config, uint32_t size);
 #endif
@@ -328,7 +327,7 @@ static void _flash_storage_init_module(void)
 
 static void _flash_storage_write_default_config(void)
 {
-  uint16_t start_sector = _flash_storage_get_first_sector();
+  uint16_t start_sector = FLASH_STORAGE_START_SECTOR;
   uint16_t i = 0;
 
   const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
@@ -360,16 +359,6 @@ static uint32_t _flash_storage_get_crc(void)
   crcResetI(&FLASH_STORAGE_CRC_HANDLE);
   return crcCalcI(&FLASH_STORAGE_CRC_HANDLE, FLASH_STORAGE_SIZE - sizeof(crc_t),
                   &_flash_storage_area[sizeof(crc_t)]);
-}
-
-static uint16_t _flash_storage_get_first_sector(void)
-{
-  /*
-   * Calculate absolute index of first flash sector
-   * used for configuration storing
-   */
-  const flash_descriptor_t *desc = efl_lld_get_descriptor(&FLASH_STORAGE_DRIVER_HANDLE);
-  return FLASH_STORAGE_LAST_SECTOR - FLASH_STORAGE_SIZE / desc->sectors_size;
 }
 
 #if defined(USE_CMD_SHELL)
@@ -530,7 +519,7 @@ void flash_storage_get_display_contrast(uint8_t *contrast_buffer)
 void flash_storage_write_sector(uint8_t *buffer, uint16_t sector)
 {
   uint32_t wait_time = 0;
-  uint16_t start_sector = _flash_storage_get_first_sector();
+  uint16_t start_sector = FLASH_STORAGE_START_SECTOR;
 
   /*
    * Erase selected sector and write afterwards

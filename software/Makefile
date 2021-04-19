@@ -154,19 +154,6 @@ include $(CHIBIOS)/tools/mk/autobuild.mk
 include $(CHIBIOS)/os/hal/lib/streams/streams.mk
 include $(CHIBIOS)/os/various/shell/shell.mk
 
-# Define linker script file here
-LDSCRIPT_FOLDER=./ld
-LDSCRIPT_TMPL=STM32F103x8.ld
-LDSCRIPT_GEN=$(LDSCRIPT_TMPL).generated
-LDSCRIPT=$(BUILDDIR)/$(LDSCRIPT_GEN)
-
-$(LDSCRIPT_FOLDER)/$(LDSCRIPT_GEN): $(LDSCRIPT_FOLDER)/$(LDSCRIPT_TMPL)
-	@echo Generating linker script $@ based on template $<
-	$(CC) -E -x c -I $(LDSCRIPT_FOLDER) $(CFLAGS) $< | grep -v '^#' > $@
-	
-$(LDSCRIPT): $(LDSCRIPT_FOLDER)/$(LDSCRIPT_GEN)
-	mv $< $@
-
 # u8g2 sources
 
 U8G2_SRC = \
@@ -282,6 +269,19 @@ include $(RULESPATH)/rules.mk
 ##############################################################################
 # Custom rules
 #
+
+# Define linker script file here
+LDSCRIPT_FOLDER=./ld
+LDSCRIPT_TMPL=STM32F103x8.ld
+LDSCRIPT_GEN=$(LDSCRIPT_TMPL).generated
+LDSCRIPT=$(BUILDDIR)/$(LDSCRIPT_GEN)
+
+$(LDSCRIPT_FOLDER)/$(LDSCRIPT_GEN): $(LDSCRIPT_FOLDER)/$(LDSCRIPT_TMPL)
+	@echo Generating linker script $@ based on template $<
+	$(CC) -E -x c -I $(INCDIR) $(CFLAGS) $< | grep -v '^#' > $@
+	
+$(LDSCRIPT): $(LDSCRIPT_FOLDER)/$(LDSCRIPT_GEN)
+	mv $< $@
 
 #
 # Custom rules

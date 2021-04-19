@@ -761,4 +761,9 @@
 #endif  /* CHCONF_H */
 
 /** @} */
+
+#ifdef USE_MAPLEMINI_BOOTLOADER
+#define CORTEX_VTOR_INIT 0x5000
+#endif
+
 // clang-format on
