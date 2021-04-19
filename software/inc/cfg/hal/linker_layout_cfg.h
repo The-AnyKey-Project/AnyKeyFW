@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
- * layout.h
+ * linker_layout_cfg.h
  *
  *  Created on: 18.04.2021
  *      Author: matthiasb85
