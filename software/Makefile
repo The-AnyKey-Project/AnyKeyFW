@@ -153,7 +153,7 @@ include $(CHIBIOS)/tools/mk/autobuild.mk
 # Other files (optional)
 include $(CHIBIOS)/os/hal/lib/streams/streams.mk
 include $(CHIBIOS)/os/various/shell/shell.mk
-
+	
 # u8g2 sources
 
 U8G2_SRC = \
@@ -219,7 +219,7 @@ ASMSRC = $(ALLASMSRC)
 ASMXSRC = $(ALLXASMSRC)
 
 # Inclusion directories.
-INCDIR = $(CONFDIR) $(ALLINC) $(U8G2) $(CHIBIOS_CONTRIB)/os/various/ inc 
+INCDIR = $(CONFDIR) $(ALLINC)
 
 # Define C warning options here.
 CWARN = -Wall -Wextra -Wundef -Wstrict-prototypes
@@ -242,13 +242,28 @@ UDEFS = -DSHELL_CMD_TEST_ENABLED=0 ${USE_STLINK} ${USE_CMD_SHELL} ${USE_USB_DISC
 UADEFS =
 
 # List all user directories here
-UINCDIR =
+UINCDIR = $(U8G2) $(CHIBIOS_CONTRIB)/os/various/ inc 
 
 # List the user directory to look for the libraries here
 ULIBDIR =
 
 # List all user libraries here
 ULIBS =
+
+
+# Define linker script file here
+LDSCRIPT_FOLDER=./ld
+LDSCRIPT_TMPL=STM32F103x8.ld
+LDSCRIPT_GEN=$(LDSCRIPT_TMPL).generated
+LDSCRIPT=$(BUILDDIR)/$(LDSCRIPT_TMPL)
+
+$(BUILDDIR)/$(LDSCRIPT_GEN): $(LDSCRIPT_FOLDER)/$(LDSCRIPT_TMPL)
+	@echo Generating linker script $@ based on template $<
+	mkdir -p $(BUILDDIR)
+	$(CC) -E -x c -I inc $(UDEFS) $<  > $@
+	
+$(LDSCRIPT): $(BUILDDIR)/$(LDSCRIPT_GEN)
+	grep -v '^#' $< > $@
 
 #
 # End of user section
@@ -269,20 +284,7 @@ include $(RULESPATH)/rules.mk
 ##############################################################################
 # Custom rules
 #
-
-# Define linker script file here
-LDSCRIPT_FOLDER=./ld
-LDSCRIPT_TMPL=STM32F103x8.ld
-LDSCRIPT_GEN=$(LDSCRIPT_TMPL).generated
-LDSCRIPT=$(BUILDDIR)/$(LDSCRIPT_GEN)
-
-$(LDSCRIPT_FOLDER)/$(LDSCRIPT_GEN): $(LDSCRIPT_FOLDER)/$(LDSCRIPT_TMPL)
-	@echo Generating linker script $@ based on template $<
-	$(CC) -E -x c -I $(INCDIR) $(CFLAGS) $< | grep -v '^#' > $@
-	
-$(LDSCRIPT): $(LDSCRIPT_FOLDER)/$(LDSCRIPT_GEN)
-	mv $< $@
-
+.PHONY : all
 #
 # Custom rules
 ##############################################################################
