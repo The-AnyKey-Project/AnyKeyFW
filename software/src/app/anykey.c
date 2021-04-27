@@ -250,7 +250,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
           send_resp = 1;
           break;
         }
-        case ANYKEY_CMD_SET_FALSH:
+        case ANYKEY_CMD_SET_FLASH:
         {
           /*
            * Received set flash request
@@ -288,7 +288,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_cmd_thread, arg)
           send_resp = 1;
           break;
         }
-        case ANYKEY_CMD_GET_FALSH:
+        case ANYKEY_CMD_GET_FLASH:
         {
           /*
            * Received get flash request

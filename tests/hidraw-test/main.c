@@ -44,7 +44,7 @@ static char _arpg_doc[] =
     "Simple test program to verify HID raw communication between Anykey firmware and host pc";
 
 static struct argp_option _argp_options[] = {
-    {"device", 'D', "DEVIE", 0, "HID raw device to be used"},
+    {"device", 'D', "DEVICE", 0, "HID raw device to be used"},
     {"command", 'C', "CMD", 0, "Command to be send"},
     {"verbose", 'v', 0, 0, "Verbose output"},
     {"quiet", 'q', 0, 0, "No output"},
@@ -89,8 +89,8 @@ static anykey_action_t _argp_cmdstr_to_action(char *cmd)
   if (strcmp(_argp_cmd_str[ANYKEY_CMD_SET_CONTRAST], cmd) == 0) return ANYKEY_CMD_SET_CONTRAST;
   if (strcmp(_argp_cmd_str[ANYKEY_CMD_GET_CONTRAST], cmd) == 0) return ANYKEY_CMD_GET_CONTRAST;
   if (strcmp(_argp_cmd_str[ANYKEY_CMD_GET_FLASH_INFO], cmd) == 0) return ANYKEY_CMD_GET_FLASH_INFO;
-  if (strcmp(_argp_cmd_str[ANYKEY_CMD_SET_FALSH], cmd) == 0) return ANYKEY_CMD_SET_FALSH;
-  if (strcmp(_argp_cmd_str[ANYKEY_CMD_GET_FALSH], cmd) == 0) return ANYKEY_CMD_GET_FALSH;
+  if (strcmp(_argp_cmd_str[ANYKEY_CMD_SET_FLASH], cmd) == 0) return ANYKEY_CMD_SET_FLASH;
+  if (strcmp(_argp_cmd_str[ANYKEY_CMD_GET_FLASH], cmd) == 0) return ANYKEY_CMD_GET_FLASH;
   return ANYKEY_CMD_ERR;
 }
 
