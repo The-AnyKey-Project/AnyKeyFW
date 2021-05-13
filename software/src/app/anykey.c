@@ -493,6 +493,13 @@ static void _anykey_handle_action(anykey_action_list_t *action_list, uint8_t sw_
           _anykey_set_layer(flash_storage_get_pointer_from_idx(_anykey_current_layer->prev_idx));
           i += sizeof(anykey_action_layer_t);
           break;
+        case ANYKEY_ACTION_UNDO_LAYER:
+          /*
+           * No parameter -> no cast needed
+           */
+          _anykey_set_layer(_anykey_previous_layer);
+          i += sizeof(anykey_action_layer_t);
+          break;
         case ANYKEY_ACTION_ADJUST_CONTRAST:
         {
           anykey_action_contrast_t *action = (anykey_action_contrast_t *)&(action_list->actions[i]);
