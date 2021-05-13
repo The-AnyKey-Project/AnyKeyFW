@@ -35,8 +35,10 @@ typedef enum
 {
   ANYKEY_ACTION_KEY_PRESS = 0,
   ANYKEY_ACTION_KEYEXT_PRESS,
+  ANYKEY_ACTION_RAWHID_PRESS,
   ANYKEY_ACTION_KEY_RELEASE,
   ANYKEY_ACTION_KEYEXT_RELEASE,
+  ANYKEY_ACTION_RAWHID_RELEASE,
   ANYKEY_ACTION_NEXT_LAYER,
   ANYKEY_ACTION_PREV_LAYER,
   ANYKEY_ACTION_ADJUST_CONTRAST
@@ -50,12 +52,12 @@ typedef struct
 
 typedef struct _anykey_layer_t
 {
-  uint32_t next_idx;                            // flash storage idx of next layer
-  uint32_t prev_idx;                            // flash storage idx of prev layer
-  uint32_t name_idx;                            // flash storage idx of name
-  uint32_t display_idx[ANYKEY_NUMBER_OF_KEYS];  // array of flash storage idx for display buffers
-  uint32_t key_action_press_idx[ANYKEY_NUMBER_OF_KEYS];  // array of flash storage idx for key press
-                                                         // actions
+  uint32_t next_idx;                                       // flash storage idx of next layer
+  uint32_t prev_idx;                                       // flash storage idx of prev layer
+  uint32_t name_idx;                                       // flash storage idx of name
+  uint32_t display_idx[ANYKEY_NUMBER_OF_KEYS];             // array of flash storage idx for display buffers
+  uint32_t key_action_press_idx[ANYKEY_NUMBER_OF_KEYS];    // array of flash storage idx for key press
+                                                           // actions
   uint32_t key_action_release_idx[ANYKEY_NUMBER_OF_KEYS];  // array of flash storage idx for key
                                                            // release actions
   led_animation_t led_animation;                           // led animation
@@ -74,6 +76,12 @@ typedef struct
   uint8_t report_id;
   uint16_t key;
 } anykey_action_keyext_t;
+
+typedef struct
+{
+  anykey_action_t action;
+  uint32_t event_id;
+} anykey_action_rawhid_t;
 
 typedef struct
 {
@@ -98,6 +106,7 @@ typedef enum
   ANYKEY_CMD_GET_FLASH_INFO,
   ANYKEY_CMD_SET_FLASH,
   ANYKEY_CMD_GET_FLASH,
+  ANYKEY_CMD_SET_EVENT_ID,
   ANYKEY_CMD_ERR
 } __attribute__((packed)) anykey_cmd_t;
 
@@ -151,6 +160,18 @@ typedef struct
   anykey_cmd_t cmd;
   uint32_t sector;
 } __attribute__((packed)) anykey_cmd_get_flash_req_t;
+
+typedef struct
+{
+  anykey_cmd_t cmd;
+  enum
+  {
+    RELEASED = 0,
+    PRESSED = 1
+  } state;
+  uint32_t event_id;
+  uint32_t delta_t;
+} __attribute__((packed)) anykey_cmd_set_event_id_req_t;
 
 typedef union
 {

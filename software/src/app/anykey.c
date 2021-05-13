@@ -63,7 +63,7 @@ static void _anykey_init_hal(void);
 static void _anykey_init_module(void);
 static void _anykey_fill_response_buffer(uint8_t *buffer, uint16_t already_filled, uint16_t size);
 static void _anykey_set_layer(anykey_layer_t *layer);
-static void _anykey_handle_action(anykey_action_list_t *action_list);
+static void _anykey_handle_action(anykey_action_list_t *action_list, uint8_t sw_id);
 #if defined(USE_CMD_SHELL)
 static anykey_layer_t *_anykey_get_layer_by_name(char *search_name);
 static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t *action_list);
@@ -75,6 +75,8 @@ static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t
 static THD_WORKING_AREA(_anykey_key_stack, ANYKEY_KEY_THREAD_STACK);
 static THD_WORKING_AREA(_anykey_cmd_stack, ANYKEY_CMD_THREAD_STACK);
 static anykey_layer_t *_anykey_current_layer = (anykey_layer_t *)NULL;
+static anykey_layer_t *_anykey_previous_layer = (anykey_layer_t *)NULL;
+static systime_t _anykey_rawhid_delta[ANYKEY_NUMBER_OF_KEYS];
 
 /*
  * Global variables
@@ -90,6 +92,7 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
   event_listener_t event_listener;
   keypad_event_t dest[ANYKEY_NUMBER_OF_KEYS];
   uint8_t sw_id = 0;
+  memset(_anykey_rawhid_delta, 0, sizeof(_anykey_rawhid_delta));
 
   chRegSetThreadName("anykey_key_th");
 
@@ -115,11 +118,13 @@ static __attribute__((noreturn)) THD_FUNCTION(_anykey_key_thread, arg)
           {
             case KEYPAD_EVENT_PRESS:
               _anykey_handle_action(flash_storage_get_pointer_from_idx(
-                  _anykey_current_layer->key_action_press_idx[sw_id]));
+                                        _anykey_current_layer->key_action_press_idx[sw_id]),
+                                    sw_id);
               break;
             case KEYPAD_EVENT_RELEASE:
               _anykey_handle_action(flash_storage_get_pointer_from_idx(
-                  _anykey_current_layer->key_action_release_idx[sw_id]));
+                                        _anykey_current_layer->key_action_release_idx[sw_id]),
+                                    sw_id);
               break;
             case KEYPAD_EVENT_NONE:
             default:
@@ -380,6 +385,7 @@ static void _anykey_set_layer(anykey_layer_t *layer)
   if (layer)
   {
     chSysLock();
+    _anykey_previous_layer = _anykey_current_layer;
     _anykey_current_layer = layer;
     chSysUnlock();
     glcd_set_displays(layer->display_idx);
@@ -387,9 +393,11 @@ static void _anykey_set_layer(anykey_layer_t *layer)
   }
 }
 
-static void _anykey_handle_action(anykey_action_list_t *action_list)
+static void _anykey_handle_action(anykey_action_list_t *action_list, uint8_t sw_id)
 {
   uint8_t i = 0;
+  uint8_t rawhid_buffer[USB_HID_RAW_EPSIZE];
+
   /*
    * Loop over action_list
    */
@@ -420,6 +428,24 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
           i += sizeof(anykey_action_keyext_t);
           break;
         }
+        case ANYKEY_ACTION_RAWHID_PRESS:
+        {
+          anykey_action_rawhid_t *action = (anykey_action_rawhid_t *)&(action_list->actions[i]);
+          anykey_cmd_set_event_id_req_t *rawhid_req = (anykey_cmd_set_event_id_req_t *)rawhid_buffer;
+
+          _anykey_rawhid_delta[sw_id] = chVTGetSystemTimeX();
+          rawhid_req->cmd = ANYKEY_CMD_SET_EVENT_ID;
+          rawhid_req->state = PRESSED;
+          rawhid_req->event_id = action->event_id;
+          rawhid_req->delta_t = 0;
+
+          _anykey_fill_response_buffer((uint8_t *)rawhid_req, sizeof(anykey_cmd_set_event_id_req_t),
+                                       USB_HID_RAW_EPSIZE);
+          usb_hid_raw_send((uint8_t *)rawhid_req, USB_HID_RAW_EPSIZE);
+
+          i += sizeof(anykey_action_rawhid_t);
+          break;
+        }
         case ANYKEY_ACTION_KEY_RELEASE:
         {
           anykey_action_key_t *action = (anykey_action_key_t *)&(action_list->actions[i]);
@@ -432,6 +458,25 @@ static void _anykey_handle_action(anykey_action_list_t *action_list)
           anykey_action_keyext_t *action = (anykey_action_keyext_t *)&(action_list->actions[i]);
           usb_hid_kbdext_send_key(action->report_id, action->key | 0x8000);
           i += sizeof(anykey_action_keyext_t);
+          break;
+        }
+        case ANYKEY_ACTION_RAWHID_RELEASE:
+        {
+          anykey_action_rawhid_t *action = (anykey_action_rawhid_t *)&(action_list->actions[i]);
+          anykey_cmd_set_event_id_req_t *rawhid_req = (anykey_cmd_set_event_id_req_t *)rawhid_buffer;
+          systime_t current_tick = chVTGetSystemTimeX();
+          systime_t delta_t = (current_tick >= _anykey_rawhid_delta[sw_id]) ? (current_tick - _anykey_rawhid_delta[sw_id]) : (TIME_MAX_SYSTIME - _anykey_rawhid_delta[sw_id] + current_tick);
+
+          rawhid_req->cmd = ANYKEY_CMD_SET_EVENT_ID;
+          rawhid_req->state = RELEASED;
+          rawhid_req->event_id = action->event_id;
+          rawhid_req->delta_t = TIME_I2MS(delta_t);
+
+          _anykey_fill_response_buffer((uint8_t *)rawhid_req, sizeof(anykey_cmd_set_event_id_req_t),
+                                       USB_HID_RAW_EPSIZE);
+          usb_hid_raw_send((uint8_t *)rawhid_req, USB_HID_RAW_EPSIZE);
+
+          i += sizeof(anykey_action_rawhid_t);
           break;
         }
         case ANYKEY_ACTION_NEXT_LAYER:
