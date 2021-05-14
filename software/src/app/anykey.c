@@ -493,6 +493,13 @@ static void _anykey_handle_action(anykey_action_list_t *action_list, uint8_t sw_
           _anykey_set_layer(flash_storage_get_pointer_from_idx(_anykey_current_layer->prev_idx));
           i += sizeof(anykey_action_layer_t);
           break;
+        case ANYKEY_ACTION_SET_LAYER:
+        {
+          anykey_action_set_layer_t *action = (anykey_action_set_layer_t *)&(action_list->actions[i]);
+          _anykey_set_layer(flash_storage_get_pointer_from_idx(action->layer_idx));
+          i += sizeof(anykey_action_set_layer_t);
+          break;
+        }
         case ANYKEY_ACTION_UNDO_LAYER:
           /*
            * No parameter -> no cast needed
@@ -572,6 +579,14 @@ static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t
           raw_length = sizeof(anykey_action_keyext_t);
           break;
         }
+        case ANYKEY_ACTION_RAWHID_PRESS:
+        {
+          anykey_action_rawhid_t *action = (anykey_action_rawhid_t *)&(action_list->actions[i]);
+          chsnprintf(action_name, sizeof(action_name), "%s", "RAWHID_PRESS");
+          chsnprintf(operators, sizeof(operators), "0x%08x", action->event_id);
+          raw_length = sizeof(anykey_action_rawhid_t);
+          break;
+        }
         case ANYKEY_ACTION_KEY_RELEASE:
         {
           anykey_action_key_t *action = (anykey_action_key_t *)&(action_list->actions[i]);
@@ -588,6 +603,14 @@ static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t
           raw_length = sizeof(anykey_action_keyext_t);
           break;
         }
+        case ANYKEY_ACTION_RAWHID_RELEASE:
+        {
+          anykey_action_rawhid_t *action = (anykey_action_rawhid_t *)&(action_list->actions[i]);
+          chsnprintf(action_name, sizeof(action_name), "%s", "RAWHID_RELEASE");
+          chsnprintf(operators, sizeof(operators), "0x%08x", action->event_id);
+          raw_length = sizeof(anykey_action_rawhid_t);
+          break;
+        }
         case ANYKEY_ACTION_NEXT_LAYER:
           chsnprintf(action_name, sizeof(action_name), "%s", "NEXT_LAYER");
           operators[0] = '\0';
@@ -595,6 +618,19 @@ static void _anykey_show_actions(BaseSequentialStream *chp, anykey_action_list_t
           break;
         case ANYKEY_ACTION_PREV_LAYER:
           chsnprintf(action_name, sizeof(action_name), "%s", "PREV_LAYER");
+          operators[0] = '\0';
+          raw_length = sizeof(anykey_action_layer_t);
+          break;
+        case ANYKEY_ACTION_SET_LAYER:
+        {
+          anykey_action_set_layer_t *action = (anykey_action_set_layer_t *)&(action_list->actions[i]);
+          chsnprintf(action_name, sizeof(action_name), "%s", "SET_LAYER");
+          chsnprintf(operators, sizeof(operators), "0x%08x", action->layer_idx);
+          raw_length = sizeof(anykey_action_set_layer_t);
+          break;
+        }
+        case ANYKEY_ACTION_UNDO_LAYER:
+          chsnprintf(action_name, sizeof(action_name), "%s", "UNDO_LAYER");
           operators[0] = '\0';
           raw_length = sizeof(anykey_action_layer_t);
           break;

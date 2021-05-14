@@ -41,6 +41,7 @@ typedef enum
   ANYKEY_ACTION_RAWHID_RELEASE,
   ANYKEY_ACTION_NEXT_LAYER,
   ANYKEY_ACTION_PREV_LAYER,
+  ANYKEY_ACTION_SET_LAYER,
   ANYKEY_ACTION_UNDO_LAYER,
   ANYKEY_ACTION_ADJUST_CONTRAST
 } __attribute__((packed)) anykey_action_t;
@@ -88,6 +89,12 @@ typedef struct
 {
   anykey_action_t action;
 } anykey_action_layer_t;
+
+typedef struct
+{
+  anykey_action_t action;
+  uint32_t layer_idx;
+} anykey_action_set_layer_t;
 
 typedef struct
 {
